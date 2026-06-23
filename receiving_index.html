@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>초상세 깃허브 & 파이어베이스 연결 가이드</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #f8fafc;
+        }
+        /* 세로 타임라인 선 */
+        .timeline-line {
+            position: absolute;
+            left: 2.5rem; /* 40px */
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: #e2e8f0;
+            z-index: 0;
+        }
+        @media (max-width: 768px) {
+            .timeline-line { left: 1.5rem; }
+        }
+        .step-container {
+            position: relative;
+            z-index: 1;
+        }
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body class="py-8 px-4 md:px-8">
+
+    <div class="max-w-3xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden">
+        
+        <div class="bg-slate-900 p-10 text-center text-white">
+            <div class="inline-block bg-yellow-400 text-slate-900 font-bold px-4 py-1 rounded-full text-sm mb-4 animate-pulse">
+                실제 화면 맞춤형 상세 버전
+            </div>
+            <h1 class="text-3xl md:text-4xl font-black mb-4 leading-tight">초등학생도 무조건 성공하는<br><span class="text-blue-400">웹사이트 완벽 배포 가이드</span></h1>
+            <p class="text-slate-300 text-lg">보이는 그대로 따라 클릭만 하세요!</p>
+        </div>
+
+        <div class="p-6 md:p-12 relative">
+            <!-- 세로 연결선 -->
+            <div class="timeline-line hidden md:block"></div>
+
+            <div class="mb-16">
+                <div class="flex items-center gap-4 mb-8 relative z-10 bg-white inline-flex pr-6 rounded-full">
+                    <div class="w-20 h-20 bg-orange-500 rounded-full flex items-center justify-center text-white text-3xl shadow-lg border-4 border-white flex-shrink-0">🔥</div>
+                    <div>
+                        <div class="text-orange-500 font-bold text-sm tracking-widest">PART 1</div>
+                        <h2 class="text-2xl font-black text-gray-800">파이어베이스 (DB 만들기)</h2>
+                    </div>
+                </div>
+
+                <div class="ml-0 md:ml-24 space-y-8 step-container">
+                    
+                    <!-- 단계 1-1 -->
+                    <div class="card-hover bg-white border-2 border-slate-100 rounded-2xl p-6 relative">
+                        <div class="absolute -left-4 -top-4 w-8 h-8 bg-slate-800 text-white font-bold rounded-full flex items-center justify-center">1</div>
+                        <h3 class="font-bold text-xl mb-3 text-slate-800">메뉴 찾기</h3>
+                        <p class="text-slate-600 leading-relaxed mb-3">파이어베이스 왼쪽 메뉴 목록에서 <span class="font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded">[데이터베이스 및 스토리지]</span> 글자를 클릭하세요. 아래로 메뉴가 열리면 <span class="font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded">[Firestore]</span>를 클릭합니다.</p>
+                        <p class="text-sm text-gray-400">※ 현재 고객님 화면(image_093d6d)과 일치하는 단계입니다.</p>
+                    </div>
+
+                    <!-- 단계 1-2 -->
+                    <div class="card-hover bg-white border-2 border-slate-100 rounded-2xl p-6 relative">
+                        <div class="absolute -left-4 -top-4 w-8 h-8 bg-slate-800 text-white font-bold rounded-full flex items-center justify-center">2</div>
+                        <h3 class="font-bold text-xl mb-3 text-slate-800">데이터베이스 만들기</h3>
+                        <p class="text-slate-600 leading-relaxed mb-3">검은색 배경 화면 가운데에 나타난 주황색 테두리의 <span class="font-bold border-2 border-orange-400 text-orange-500 px-3 py-1 rounded-full text-sm inline-block mx-1">데이터베이스 만들기</span> 버튼을 클릭하세요.</p>
+                        <ul class="list-disc pl-5 text-sm text-slate-500 space-y-1">
+                            <li>위치는 기본값(미국 등)으로 두고 '다음' 클릭</li>
+                            <li>'프로덕션 모드'로 두고 '만들기' 클릭</li>
+                        </ul>
+                    </div>
+
+                    <!-- 단계 1-3 -->
+                    <div class="card-hover bg-red-50 border-2 border-red-200 rounded-2xl p-6 relative">
+                        <div class="absolute -left-4 -top-4 w-8 h-8 bg-red-500 text-white font-bold rounded-full flex items-center justify-center shadow-lg animate-bounce">!</div>
+                        <h3 class="font-bold text-xl mb-3 text-red-800 flex items-center gap-2">데이터베이스 문 열어주기 (매우 중요)</h3>
+                        <p class="text-slate-700 leading-relaxed mb-4">데이터베이스가 만들어지면, 위쪽 탭에서 <strong>[규칙(Rules)]</strong>을 클릭합니다. 아래 네모 박스처럼 영어 단어 하나를 고친 후 꼭 <strong>[게시(Publish)]</strong> 버튼을 누르세요.</p>
+                        <div class="bg-slate-900 text-slate-300 p-4 rounded-xl font-mono text-sm shadow-inner">
+                            allow read, write: if <span class="line-through text-red-400">false</span> <span class="text-green-400 font-bold text-base bg-slate-800 px-2 py-1 rounded">true</span>;
+                        </div>
+                    </div>
+
+                    <!-- 단계 1-4 -->
+                    <div class="card-hover bg-white border-2 border-slate-100 rounded-2xl p-6 relative">
+                        <div class="absolute -left-4 -top-4 w-8 h-8 bg-slate-800 text-white font-bold rounded-full flex items-center justify-center">3</div>
+                        <h3 class="font-bold text-xl mb-3 text-slate-800">내 컴퓨터와 연결할 '열쇠 코드' 복사하기</h3>
+                        <ul class="list-decimal pl-5 text-slate-600 space-y-3 leading-relaxed mb-4">
+                            <li>왼쪽 맨 위 <strong>톱니바퀴 아이콘(⚙️)</strong>을 누르고 <strong>[프로젝트 설정]</strong> 클릭!</li>
+                            <li>화면을 맨 아래로 내려서 <strong><span class="text-blue-500 font-bold">&lt;/&gt; 모양 아이콘 (웹)</span></strong> 클릭!</li>
+                            <li>앱 닉네임을 아무거나(예: web) 적고 <strong>[앱 등록]</strong> 클릭!</li>
+                            <li>화면에 나타나는 <code>const firebaseConfig = { ... }</code> 모양의 코드를 <strong>전부 마우스로 드래그해서 복사(Ctrl+C)</strong> 합니다.</li>
+                        </ul>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="mb-16">
+                <div class="flex items-center gap-4 mb-8 relative z-10 bg-white inline-flex pr-6 rounded-full">
+                    <div class="w-20 h-20 bg-blue-500 rounded-full flex items-center justify-center text-white text-3xl shadow-lg border-4 border-white flex-shrink-0">💻</div>
+                    <div>
+                        <div class="text-blue-500 font-bold text-sm tracking-widest">PART 2</div>
+                        <h2 class="text-2xl font-black text-gray-800">내 HTML 파일 수정</h2>
+                    </div>
+                </div>
+
+                <div class="ml-0 md:ml-24 step-container">
+                    <div class="card-hover bg-blue-50 border-2 border-blue-200 rounded-2xl p-6">
+                        <h3 class="font-bold text-xl mb-3 text-blue-900">복사한 열쇠 붙여넣기</h3>
+                        <p class="text-slate-700 leading-relaxed mb-2">내 컴퓨터(바탕화면 등)에 있는 엑셀용 <strong>HTML 파일</strong>을 메모장이나 코드 편집기(VS Code)로 엽니다.</p>
+                        <p class="text-slate-700 leading-relaxed font-bold">아까 파이어베이스에서 복사해 둔 열쇠 코드를 HTML 파일 안의 알맞은 곳에 붙여넣기(Ctrl+V) 하고 반드시 <span class="text-blue-600 underline">저장(Ctrl+S)</span> 합니다.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-8">
+                <div class="flex items-center gap-4 mb-8 relative z-10 bg-white inline-flex pr-6 rounded-full">
+                    <div class="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center text-white text-3xl shadow-lg border-4 border-white flex-shrink-0">🐙</div>
+                    <div>
+                        <div class="text-slate-800 font-bold text-sm tracking-widest">PART 3</div>
+                        <h2 class="text-2xl font-black text-gray-800">깃허브 (인터넷 주소 만들기)</h2>
+                    </div>
+                </div>
+
+                <div class="ml-0 md:ml-24 space-y-8 step-container">
+                    
+                    <!-- 단계 3-1 -->
+                    <div class="card-hover bg-white border-2 border-slate-100 rounded-2xl p-6 relative">
+                        <div class="absolute -left-4 -top-4 w-8 h-8 bg-slate-800 text-white font-bold rounded-full flex items-center justify-center">1</div>
+                        <h3 class="font-bold text-xl mb-3 text-slate-800">새 저장소 만들기</h3>
+                        <p class="text-slate-600 leading-relaxed">깃허브 사이트에서 초록색 <strong>[New]</strong> 버튼을 누릅니다. 저장소 이름(예: receiving)을 영어로 적고, 반드시 <strong><span class="text-blue-600 font-bold">Public (공개)</span></strong>을 선택한 후 바닥의 초록색 <strong>[Create repository]</strong> 버튼을 누릅니다.</p>
+                    </div>
+
+                    <!-- 단계 3-2 -->
+                    <div class="card-hover bg-white border-2 border-slate-100 rounded-2xl p-6 relative">
+                        <div class="absolute -left-4 -top-4 w-8 h-8 bg-slate-800 text-white font-bold rounded-full flex items-center justify-center">2</div>
+                        <h3 class="font-bold text-xl mb-3 text-slate-800">파일 올리는 곳으로 이동</h3>
+                        <p class="text-slate-600 leading-relaxed mb-4">새 저장소가 만들어지면 여러 영어 글씨가 나옵니다. 파란색 박스 부분의 글씨들 중에서 <span class="font-bold text-blue-600 underline">uploading an existing file</span> 이라는 파란색 글씨를 찾아 <strong>클릭</strong>하세요.</p>
+                        <div class="bg-gray-100 p-3 rounded-lg flex items-center justify-center border border-gray-200">
+                            <span class="text-sm text-gray-500">... or <span class="text-blue-500 font-medium cursor-pointer">uploading an existing file</span> ...</span>
+                        </div>
+                        <p class="text-sm text-gray-400 mt-2">※ 현재 고객님 화면(image_093e7e)에서 바로 클릭해야 할 버튼입니다!</p>
+                    </div>
+
+                    <!-- 단계 3-3 -->
+                    <div class="card-hover bg-white border-2 border-slate-100 rounded-2xl p-6 relative">
+                        <div class="absolute -left-4 -top-4 w-8 h-8 bg-slate-800 text-white font-bold rounded-full flex items-center justify-center">3</div>
+                        <h3 class="font-bold text-xl mb-3 text-slate-800">내 HTML 파일 올리기</h3>
+                        <p class="text-slate-600 leading-relaxed mb-3">파일 업로드 화면이 나오면, 아까 열쇠 코드를 넣고 저장했던 <strong>내 컴퓨터의 HTML 파일</strong>을 마우스로 끌어다가 이 창에 놓습니다. (드래그 앤 드롭)</p>
+                        <p class="text-slate-600 leading-relaxed">파일 이름이 목록에 나타나면 밑에 있는 초록색 <strong>[Commit changes]</strong> 버튼을 꾹 누릅니다.</p>
+                    </div>
+
+                    <!-- 단계 3-4 -->
+                    <div class="card-hover border-2 border-green-500 bg-green-50 rounded-2xl p-6 relative shadow-[0_0_15px_rgba(34,197,94,0.3)]">
+                        <div class="absolute -left-4 -top-4 w-8 h-8 bg-green-500 text-white font-bold rounded-full flex items-center justify-center animate-pulse">4</div>
+                        <h3 class="font-bold text-2xl mb-3 text-green-800">🎉 마지막! 진짜 인터넷 주소 켜기</h3>
+                        <ul class="list-decimal pl-5 text-slate-700 space-y-3 leading-relaxed mb-4 font-medium">
+                            <li>위쪽 탭 메뉴 중 맨 끝에 있는 톱니바퀴 <strong>[Settings]</strong> 클릭!</li>
+                            <li>왼쪽 메뉴 목록에서 <strong>[Pages]</strong> 클릭!</li>
+                            <li>화면 가운데 'Branch' 밑에 있는 <span class="bg-white px-2 py-1 border rounded text-sm text-gray-500">None ▼</span> 버튼을 눌러서 <strong><span class="text-blue-600">main</span></strong> (또는 master)으로 바꿉니다.</li>
+                            <li>옆에 생기는 <strong>[Save]</strong> 버튼 클릭!</li>
+                        </ul>
+                        <div class="bg-white p-4 rounded-xl border border-green-200 text-center">
+                            <p class="text-lg font-bold text-slate-800">⏱️ 딱 1분만 기다리세요!</p>
+                            <p class="text-sm text-slate-500 mt-1">1~2분 뒤 화면을 새로고침(F5)하면 위쪽에 <br><span class="text-blue-500 font-mono font-bold break-all">https://arxotn-git.github.io/receiving/</span> 같은 파란색 인터넷 주소가 짠! 하고 나타납니다.</p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+        
+        <div class="bg-slate-100 p-6 text-center text-slate-500 font-medium border-t border-slate-200">
+            이 주소를 복사해서 핸드폰이나 다른 사람에게 보내면,<br>누구나 파이어베이스의 데이터를 볼 수 있습니다. 고생하셨습니다! 👍
+        </div>
+    </div>
+
+</body>
+</html>
