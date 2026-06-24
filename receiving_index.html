@@ -10,6 +10,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <!-- Chart.js for data visualization -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chart.js DataLabels Plugin -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
     <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <style>
@@ -23,15 +25,60 @@
             background-color: #eff6ff;
             border-color: #3b82f6;
         }
+
+        /* 인증 모달 오버레이 */
+        #auth-overlay {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(15, 23, 42, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            backdrop-filter: blur(10px);
+        }
+        
+        /* 인증이 완료되지 않으면 메인 콘텐츠를 숨김 */
+        body:not(.authenticated) main,
+        body:not(.authenticated) header {
+            display: none !important;
+        }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen flex flex-col text-slate-800">
+
+    <!-- ==== 인증 모달 UI ==== -->
+    <div id="auth-overlay">
+        <div class="bg-white rounded-3xl p-10 max-w-md w-full mx-4 shadow-2xl flex flex-col items-center text-center transform transition-all duration-500 scale-100 opacity-100">
+            <div class="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center text-4xl mb-6 shadow-inner ring-8 ring-indigo-50/50">
+                <i class="ph ph-lock-key"></i>
+            </div>
+            <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight">관리자 인증</h2>
+            <p class="text-sm text-slate-500 mt-3 font-medium px-4 leading-relaxed">
+                이지어드민 입고 데이터에 접근하시려면<br>비밀번호를 입력해주세요.
+            </p>
+            <form id="auth-form" class="w-full mt-8">
+                <div class="relative group">
+                    <input type="password" id="password-input" 
+                        class="w-full px-5 py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl text-center text-lg tracking-[0.3em] font-bold text-slate-700 focus:outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all placeholder:tracking-normal placeholder:font-normal placeholder:text-slate-400" 
+                        placeholder="비밀번호 입력">
+                    <p id="auth-error" class="text-rose-500 text-xs font-bold mt-3 h-4 opacity-0 transition-opacity">
+                        비밀번호가 일치하지 않습니다
+                    </p>
+                </div>
+                <button type="submit" 
+                    class="w-full mt-4 bg-slate-900 hover:bg-indigo-600 text-white font-bold py-4 px-6 rounded-2xl transition-all duration-200 shadow-[0_4px_14px_0_rgba(0,0,0,0.1)] hover:shadow-[0_6px_20px_rgba(79,70,229,0.23)] active:scale-[0.98]">
+                    확인
+                </button>
+            </form>
+        </div>
+    </div>
 
     <header class="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center sticky top-0 z-20 shadow-sm">
         <div class="flex items-center gap-3">
             <i class="ph ph-chart-line-up text-3xl text-blue-600"></i>
             <div>
-                <h1 class="text-xl font-bold text-slate-900">이지어드민 입고 데이터 분석기 <span class="text-blue-500">(v04)</span></h1>
+                <h1 class="text-xl font-bold text-slate-900">이지어드민 입고 데이터 분석기 <span class="text-blue-500">(v06)</span></h1>
                 <p class="text-xs text-slate-500 mt-0.5">파이어베이스 클라우드 데이터 영구 저장 솔루션</p>
             </div>
         </div>
@@ -98,7 +145,7 @@
             </div>
         </div>
 
-        <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex flex-col w-full h-[500px] shrink-0 relative">
+        <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex flex-col w-full h-[600px] shrink-0 relative">
             <div class="flex justify-between items-center mb-4 shrink-0">
                 <h3 id="chart-title" class="font-bold text-lg flex items-center gap-2">
                     <i class="ph ph-chart-bar text-blue-500"></i>
@@ -117,7 +164,7 @@
             </div>
             
             <div class="flex-1 relative w-full h-full overflow-hidden border border-slate-100 rounded-lg bg-slate-50/30">
-                <div id="chart-scroll-container" class="w-full h-full overflow-x-auto overflow-y-hidden custom-scrollbar pb-2">
+                <div id="chart-scroll-container" class="w-full h-full overflow-x-auto overflow-y-hidden custom-scrollbar pb-2 pt-6">
                     <div id="chart-wrapper" class="h-full relative transition-all" style="width: 100%;">
                         <canvas id="inboundChart"></canvas>
                     </div>
@@ -170,13 +217,72 @@
 
     </main>
 
-    <!-- 🔥 파이어베이스 모듈 스크립트로 전면 교체 -->
+    <!-- Chart.js 플러그인 등록 -->
+    <script>
+        // Chart.js DataLabels 플러그인 전역 등록
+        Chart.register(ChartDataLabels);
+    </script>
+
+    <!-- 🔥 파이어베이스 모듈 스크립트 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, doc, getDocs, collection, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-        // 고객님께서 직접 구성하신 파이어베이스 고유 키 설정
+        // ==== 인증 로직 ====
+        const correctPassword = "0501";
+        const authOverlay = document.getElementById('auth-overlay');
+        const authForm = document.getElementById('auth-form');
+        const passwordInput = document.getElementById('password-input');
+        const authError = document.getElementById('auth-error');
+
+        function checkAuth() {
+            if (localStorage.getItem('ezadmin_auth') === 'true') {
+                authOverlay.style.display = 'none';
+                document.body.classList.add('authenticated');
+                initCloudApp(); // 인증 성공 시에만 데이터 로딩 시작
+            } else {
+                passwordInput.focus();
+            }
+        }
+
+        authForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (passwordInput.value === correctPassword) {
+                localStorage.setItem('ezadmin_auth', 'true');
+                authError.style.opacity = '0';
+                authOverlay.style.opacity = '0';
+                setTimeout(() => {
+                    authOverlay.style.display = 'none';
+                    document.body.classList.add('authenticated');
+                    initCloudApp();
+                }, 300);
+            } else {
+                authError.style.opacity = '1';
+                passwordInput.value = '';
+                passwordInput.focus();
+                
+                authOverlay.querySelector('.bg-white').classList.add('shake');
+                setTimeout(() => {
+                    authOverlay.querySelector('.bg-white').classList.remove('shake');
+                }, 400);
+            }
+        });
+
+        const style = document.createElement('style');
+        style.innerHTML = `
+            @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                25% { transform: translateX(-5px); }
+                75% { transform: translateX(5px); }
+            }
+            .shake { animation: shake 0.4s ease-in-out; }
+        `;
+        document.head.appendChild(style);
+
+        // 초기 인증 상태 확인
+        checkAuth();
+
+        // 파이어베이스 설정
         const firebaseConfig = {
             apiKey: "AIzaSyDWB700tZ3-OTSuHFOGT9FTQzagUu6Y_N0",
             authDomain: "receiving-187d4.firebaseapp.com",
@@ -187,12 +293,8 @@
             measurementId: "G-1SPX4TZGGG"
         };
 
-        // 파이어베이스 실행 및 인증
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        const auth = getAuth(app);
-        
-        // 데이터 무결성 보장을 위한 Firestore 저장 경로 (규칙 준수)
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'ezadmin_dashboard';
 
         // Data Structure
@@ -203,13 +305,11 @@
         let selectedItemKey = null;
         let selectedYear = '2026';
 
-        // Constants based on EzAdmin
         const DATA_START_COL_INDEX = 78;
         const ITEM_CODE_COL = '상품코드';
         const ITEM_NAME_COL = '상품명';
         const ITEM_OPT_COL = '옵션';
 
-        // DOM Elements
         const dropZone = document.getElementById('drop-zone');
         const fileInput = document.getElementById('file-input');
         const statusContainer = document.getElementById('status-container');
@@ -223,22 +323,17 @@
         const chartTitle = document.getElementById('chart-title');
         const cloudStatus = document.getElementById('cloud-status');
 
-        // ==== 1. 초기 로딩 시 파이어베이스 클라우드에서 데이터 가져오기 ====
         async function initCloudApp() {
             cloudStatus.innerHTML = `<i class="ph ph-spinner-gap animate-spin text-blue-500 text-lg"></i> <span class="text-blue-600">데이터 불러오는 중...</span>`;
             cloudStatus.className = "flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-full text-xs font-medium transition-colors";
 
             try {
-                // 안전한 접속을 위한 익명 로그인 우선 수행
-                await signInAnonymously(auth);
-
                 const itemsRef = collection(db, 'artifacts', appId, 'public', 'data', 'items');
                 const snapshot = await getDocs(itemsRef);
                 
                 let loadedCount = 0;
                 snapshot.forEach(docSnap => {
                     const data = docSnap.data();
-                    // 파이어베이스에서 가져온 데이터를 로컬 메모리에 적재
                     globalData[data.originalKey] = data; 
                     if(data.dates) {
                         Object.keys(data.dates).forEach(d => allDates.add(d));
@@ -249,7 +344,6 @@
                 cloudStatus.innerHTML = `<i class="ph ph-cloud-check text-emerald-500 text-lg"></i> <span class="text-emerald-600">동기화 완료 (${loadedCount}건)</span>`;
                 cloudStatus.className = "flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-full text-xs font-medium transition-colors";
 
-                // 불러온 데이터를 바탕으로 리스트 렌더링
                 renderItemList(searchInput.value);
 
             } catch(e) {
@@ -260,10 +354,6 @@
             }
         }
 
-        // 페이지 진입 즉시 클라우드 동기화 시작
-        initCloudApp();
-
-        // 이벤트 바인딩
         dropZone.addEventListener('click', () => fileInput.click());
         dropZone.addEventListener('dragover', (e) => {
             e.preventDefault();
@@ -291,10 +381,7 @@
             if (selectedItemKey) renderChart(selectedItemKey);
         }
 
-        // ==== 2. 엑셀 업로드 시 데이터 로컬 병합 후 클라우드 전송 ====
         async function processFiles(files) {
-            // 주의: globalData를 비우지 않음! 기존 클라우드 데이터와 병합하기 위함.
-            
             statusContainer.classList.remove('hidden');
             loadingSpinner.classList.remove('hidden');
             statusText.innerText = "엑셀 파싱 및 데이터 병합 중...";
@@ -307,7 +394,6 @@
                 statusDetail.innerText = `${i + 1} / ${files.length} 엑셀 파싱 완료 (${file.name})`;
             }
 
-            // --- 엑셀 파싱 완료 후 파이어베이스 업로드 시작 ---
             cloudStatus.innerHTML = `<i class="ph ph-spinner-gap animate-spin text-blue-500 text-lg"></i> <span class="text-blue-600">클라우드 저장 중...</span>`;
             cloudStatus.className = "flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-full text-xs font-medium";
             
@@ -319,15 +405,12 @@
                 let writeCount = 0;
 
                 for (const [key, item] of Object.entries(globalData)) {
-                    // Firebase 문서 ID 규칙에 맞춰 특수문자 제거
                     const safeKey = key.replace(/[\/\\.#$\[\]]/g, '_');
                     const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'items', safeKey);
                     
-                    // 기존 데이터에 merge(덮어쓰기/합치기)
                     batch.set(docRef, { ...item, originalKey: key }, { merge: true });
                     writeCount++;
 
-                    // 배치 저장 한계(500) 도달 전 끊어서 전송
                     if (writeCount >= 400) {
                         await batch.commit();
                         batch = writeBatch(db);
@@ -512,7 +595,6 @@
             displayItems.forEach(item => {
                 const li = document.createElement('li');
                 li.className = "p-4 border border-slate-200 hover:bg-blue-50 cursor-pointer transition-colors flex flex-col justify-between gap-2 rounded-xl bg-white shadow-sm";
-                // 모듈 스코프 이슈 해결을 위해 직접 이벤트 할당
                 li.addEventListener('click', () => selectItem(item.key, li));
                 
                 li.innerHTML = `
@@ -580,9 +662,11 @@
             const yearText = selectedYear === 'all' ? '전체 기간' : `${selectedYear}년도`;
             chartTitle.innerHTML = `<i class="ph ph-chart-bar text-blue-500"></i> ${item.name} 입고 추이 <span class="text-sm text-slate-400 font-normal ml-2">(${yearText})</span>`;
 
+            // 가로 스크롤을 위해 동적 넓이 계산
             const wrapper = document.getElementById('chart-wrapper');
             const parentWidth = wrapper.parentElement.clientWidth;
-            const calculatedWidth = Math.max(parentWidth, filteredDates.length * 60);
+            // 데이터 레이블이 겹치지 않도록 넓이를 좀 더 넉넉하게 할당
+            const calculatedWidth = Math.max(parentWidth, filteredDates.length * 80);
             wrapper.style.width = calculatedWidth + 'px';
 
             const ctx = document.getElementById('inboundChart').getContext('2d');
@@ -610,7 +694,8 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     interaction: { mode: 'index', intersect: false },
-                    layout: { padding: { top: 20, bottom: 10, left: 10, right: 20 } },
+                    // 상단 레이블이 잘리지 않도록 top 패딩을 넉넉하게 설정
+                    layout: { padding: { top: 50, bottom: 20, left: 10, right: 20 } },
                     plugins: {
                         legend: { display: false },
                         tooltip: {
@@ -621,12 +706,31 @@
                             callbacks: {
                                 label: function(context) { return ' 입고량: ' + context.parsed.y.toLocaleString() + ' 개'; }
                             }
+                        },
+                        // datalabels 플러그인 설정
+                        datalabels: {
+                            color: '#334155', // slate-700
+                            anchor: 'end',
+                            align: 'top',
+                            offset: 4,
+                            font: {
+                                weight: 'bold',
+                                size: 11,
+                                family: 'Pretendard'
+                            },
+                            formatter: function(value, context) {
+                                const dateStr = context.chart.data.labels[context.dataIndex];
+                                // 연도 뒷부분 두자리와 월일 추출 (예: 24-05-12)
+                                const shortDate = dateStr.substring(2);
+                                return value.toLocaleString() + '\n(' + shortDate + ')';
+                            },
+                            textAlign: 'center'
                         }
                     },
                     scales: {
                         x: { grid: { display: false, drawBorder: false }, ticks: { font: { family: 'Pretendard' } } },
                         y: {
-                            beginAtZero: false, grace: '10%', 
+                            beginAtZero: false, grace: '15%', 
                             grid: { color: 'rgba(226, 232, 240, 0.5)', drawBorder: false },
                             ticks: {
                                 font: { family: 'Pretendard' },
