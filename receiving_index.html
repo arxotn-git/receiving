@@ -3,16 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>이지어드민 품목별 입고 현황 대시보드</title>
-    <!-- Tailwind CSS -->
+    <title>이지어드민 품목별 입고 현황 대시보드 (v10)</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- SheetJS for Excel reading -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <!-- Chart.js for data visualization -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Chart.js DataLabels Plugin -->
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
-    <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <style>
         body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; }
@@ -46,7 +41,6 @@
 </head>
 <body class="bg-slate-50 min-h-screen flex flex-col text-slate-800">
 
-    <!-- ==== 인증 모달 UI ==== -->
     <div id="auth-overlay">
         <div class="bg-white rounded-3xl p-10 max-w-md w-full mx-4 shadow-2xl flex flex-col items-center text-center transform transition-all duration-500 scale-100 opacity-100">
             <div class="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center text-4xl mb-6 shadow-inner ring-8 ring-indigo-50/50">
@@ -73,26 +67,36 @@
         </div>
     </div>
 
-    <!-- Header -->
     <header class="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center sticky top-0 z-20 shadow-sm">
         <div class="flex items-center gap-3">
             <i class="ph ph-chart-line-up text-3xl text-blue-600"></i>
             <div>
-                <h1 class="text-xl font-bold text-slate-900">이지어드민 입고 데이터 분석기 <span class="text-blue-500">(v09)</span></h1>
+                <h1 class="text-xl font-bold text-slate-900 flex items-center gap-3">
+                    이지어드민 입고 데이터 분석기 <span class="text-blue-500">(v10)</span>
+                    <div id="cloud-status" class="flex items-center gap-1.5 px-3 py-1 bg-slate-100 text-slate-500 rounded-full text-xs font-medium transition-colors">
+                        <i class="ph ph-spinner-gap animate-spin text-lg"></i>
+                        <span>클라우드 연결 준비중...</span>
+                    </div>
+                </h1>
                 <p class="text-xs text-slate-500 mt-0.5">파이어베이스 클라우드 데이터 실시간 동기화 솔루션</p>
             </div>
         </div>
         <div class="text-sm flex items-center gap-3">
-            <div id="cloud-status" class="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-500 rounded-full text-xs font-medium transition-colors">
-                <i class="ph ph-spinner-gap animate-spin text-lg"></i>
-                <span>클라우드 연결 준비중...</span>
-            </div>
+            <a href="https://arxotn-git.github.io/yorgo/"
+               class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-extrabold rounded-xl transition-all shadow-md active:scale-95">
+                <span>로켓 &amp; N배송 재고 현황</span>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+            </a>
+            <a href="https://arxotn-git.github.io/CLSTOCK/clindex.html"
+               class="inline-flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-extrabold rounded-xl transition-all shadow-md active:scale-95">
+                <span>CL 시스템 재고 관리</span>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+            </a>
         </div>
     </header>
 
     <main class="flex-1 p-6 gap-6 flex flex-col w-full max-w-[1600px] mx-auto">
         
-        <!-- Top Section: Item List (Full Width) -->
         <div class="w-full bg-white border border-slate-200 rounded-xl flex flex-col overflow-hidden shadow-sm shrink-0">
             <div class="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center shrink-0">
                 <h3 class="font-bold flex items-center gap-2 text-lg">
@@ -102,7 +106,6 @@
                 <span id="item-count" class="text-sm font-semibold bg-slate-200 text-slate-700 px-3 py-1.5 rounded-full">0건</span>
             </div>
             
-            <!-- 📌 대폭 커진 검색창 영역 (요청 반영) -->
             <div class="p-6 border-b border-slate-100 shrink-0 bg-slate-50/50">
                 <div class="relative">
                     <i class="ph ph-magnifying-glass absolute left-6 top-1/2 transform -translate-y-1/2 text-slate-400 text-3xl"></i>
@@ -118,9 +121,6 @@
             </ul>
         </div>
 
-        <!-- 📌 요약 카드(summary-cards-container) 완전 삭제 처리 -->
-
-        <!-- Chart Area -->
         <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col w-full h-[650px] shrink-0 relative">
             <div class="flex flex-wrap justify-between items-center mb-6 shrink-0 gap-4">
                 <h3 id="chart-title" class="font-bold text-xl flex items-center gap-2">
@@ -128,7 +128,6 @@
                     기간별 입고 흐름
                 </h3>
                 <div class="flex items-center gap-4">
-                    <!-- 📌 연도 필터 -->
                     <div id="year-filter-container" class="flex flex-wrap gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200">
                         <span class="text-sm text-slate-400 py-1.5 px-3 font-bold">품목을 선택하세요</span>
                     </div>
@@ -153,7 +152,6 @@
             </div>
         </div>
 
-        <!-- Data Table Area -->
         <div id="table-container" class="hidden bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col w-full shrink-0">
             <h3 id="table-title" class="font-bold text-lg flex items-center gap-2 mb-4">
                 <i class="ph ph-table text-emerald-500"></i>
@@ -173,7 +171,6 @@
             </div>
         </div>
         
-        <!-- Bottom: File Upload Zone -->
         <div class="w-full mt-6 pb-10">
             <div id="drop-zone" class="bg-white border-2 border-dashed border-slate-300 rounded-2xl p-10 text-center transition-all flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 hover:border-blue-400">
                 <input type="file" id="file-input" multiple accept=".xlsx, .xls, .csv" class="hidden">
@@ -196,7 +193,6 @@
 
     </main>
 
-    <!-- ==== 브라우저 기본 드래그 방지 및 플러그인 ==== -->
     <script>
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
             window.addEventListener(eventName, preventDefaults, false);
@@ -211,7 +207,6 @@
         Chart.register(ChartDataLabels);
     </script>
 
-    <!-- 🔥 파이어베이스 모듈 스크립트 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, doc, collection, writeBatch, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -257,7 +252,6 @@
         style.innerHTML = `@keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } } .shake { animation: shake 0.4s ease-in-out; }`;
         document.head.appendChild(style);
 
-        // ✅ Firebase 초기화를 checkAuth() 이전에 먼저 실행 (핵심 버그 수정)
         const firebaseConfig = {
             apiKey: "AIzaSyDWB700tZ3-OTSuHFOGT9FTQzagUu6Y_N0",
             authDomain: "receiving-187d4.firebaseapp.com",
@@ -279,7 +273,6 @@
             cloudStatus.innerHTML = `<i class="ph ph-warning-circle text-red-500 text-lg"></i> <span class="text-red-600">DB 초기화 실패</span>`;
         }
 
-        // ✅ Firebase 초기화 완료 후 인증 체크
         checkAuth();
 
         let globalData = {};
@@ -288,7 +281,7 @@
         let chartType = 'bar';
         let selectedItemKey = null;
         let selectedYear = 'all';
-        let isUploading = false; // ✅ 업로드 중 onSnapshot 충돌 방지 플래그
+        let isUploading = false; 
 
         const DATA_START_COL_INDEX = 78;
         const ITEM_CODE_COL = '상품코드';
@@ -311,12 +304,11 @@
         function initCloudApp() {
             if (!db) return;
             cloudStatus.innerHTML = `<i class="ph ph-spinner-gap animate-spin text-blue-500 text-lg"></i> <span class="text-blue-600">데이터 동기화 중...</span>`;
-            cloudStatus.className = "flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-full text-xs font-bold transition-colors";
+            cloudStatus.className = "flex items-center gap-1.5 px-3 py-1 bg-blue-50 border border-blue-200 rounded-full text-xs font-bold transition-colors";
 
             const itemsRef = collection(db, 'artifacts', appId, 'public', 'data', 'items');
             
             onSnapshot(itemsRef, (snapshot) => {
-                // ✅ 업로드 중에는 onSnapshot이 globalData를 덮어쓰지 않도록 방어
                 if (isUploading) return;
 
                 globalData = {};
@@ -326,17 +318,16 @@
                 snapshot.forEach(docSnap => {
                     const data = docSnap.data();
                     if(data.originalKey) {
-                        // DB에서 가져올 때 안전망 확보
                         if(!data.dates) data.dates = {};
-                        
                         globalData[data.originalKey] = data; 
                         Object.keys(data.dates).forEach(d => allDates.add(d));
                         loadedCount++;
                     }
                 });
 
-                cloudStatus.innerHTML = `<i class="ph ph-cloud-check text-emerald-500 text-lg"></i> <span class="text-emerald-600">안전하게 저장됨 (${loadedCount}건)</span>`;
-                cloudStatus.className = "flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-full text-xs font-bold transition-colors cursor-pointer";
+                // 텍스트 통일 및 색상 적용
+                cloudStatus.innerHTML = `<i class="ph ph-cloud-check text-emerald-500 text-lg"></i> <span class="text-emerald-600">실시간 연동 완료 (${loadedCount}건)</span>`;
+                cloudStatus.className = "flex items-center gap-1.5 px-3 py-1 bg-emerald-50 border border-emerald-200 rounded-full text-xs font-bold transition-colors cursor-pointer";
                 
                 renderItemList(searchInput.value);
                 
@@ -346,7 +337,7 @@
             }, (error) => {
                 console.error("클라우드 연동 에러:", error);
                 cloudStatus.innerHTML = `<i class="ph ph-warning text-red-500 text-lg"></i> <span class="text-red-600">접근 권한 에러</span>`;
-                cloudStatus.className = "flex items-center gap-1.5 px-3 py-1.5 bg-red-50 border border-red-200 rounded-full text-xs font-bold transition-colors cursor-pointer";
+                cloudStatus.className = "flex items-center gap-1.5 px-3 py-1 bg-red-50 border border-red-200 rounded-full text-xs font-bold transition-colors cursor-pointer";
             });
         }
 
@@ -379,7 +370,7 @@
         }
 
         async function processFiles(files) {
-            isUploading = true; // ✅ 업로드 시작: onSnapshot 충돌 차단
+            isUploading = true; 
             statusContainer.classList.remove('hidden');
             loadingSpinner.classList.remove('hidden');
             statusText.innerText = "엑셀 파싱 및 데이터 덮어쓰기 중...";
@@ -434,7 +425,6 @@
 
             loadingSpinner.classList.add('hidden');
             
-            // ✅ 업로드 완료: 플래그 해제 후 UI 갱신
             isUploading = false;
             renderItemList(searchInput.value);
             if (selectedItemKey && globalData[selectedItemKey]) {
@@ -451,7 +441,6 @@
                 statusContainer.classList.replace('border-red-200', 'border-blue-200');
             }, 4000);
             
-            // 📌 다중 업로드를 위해 fileInput 리셋
             fileInput.value = '';
         }
 
@@ -547,7 +536,6 @@
                             const fullName = baseName + opt;
                             const key = `${code}_${fullName}`;
 
-                            // 📌 Null Check 방어 코드 도입
                             if (!globalData[key]) {
                                 globalData[key] = { code: code, name: fullName, dates: {} };
                             }
@@ -560,7 +548,6 @@
                                 if (typeof rawVal === 'string') rawVal = rawVal.replace(/,/g, '');
                                 const val = parseInt(rawVal) || 0;
                                 if (val > 0) {
-                                    // 📌 중복 카운팅 해결: 더하기가 아닌 최신값 덮어쓰기(=)
                                     globalData[key].dates[col.dateStr] = val; 
                                 }
                             });
@@ -578,7 +565,6 @@
         function renderItemList(filterText = '') {
             itemList.innerHTML = '';
 
-            // ✅ 검색어 없으면 목록 숨기고 종료
             if (!filterText.trim()) {
                 itemCount.innerText = `0건`;
                 itemList.classList.add('hidden');
@@ -613,7 +599,6 @@
 
             displayItems.forEach((item, index) => {
                 const li = document.createElement('li');
-                // ✅ 첫 번째 항목은 항상 선택 스타일
                 const isFirst = index === 0;
                 const isSelected = isFirst || selectedItemKey === item.key;
 
@@ -635,7 +620,6 @@
                 `;
                 itemList.appendChild(li);
 
-                // ✅ 첫 번째 항목 자동으로 그래프·상세 테이블 렌더링
                 if (isFirst) {
                     selectedItemKey = item.key;
                     selectedYear = 'all';
@@ -675,7 +659,17 @@
             
             const chartData = filteredDates.map(d => datesObj[d]);
             const yearText = selectedYear === 'all' ? '전체 기간' : `${selectedYear}년도`;
-            chartTitle.innerHTML = `<i class="ph ph-chart-bar text-blue-500"></i> <span class="text-slate-800">${item.name}</span> 입고 추이 <span class="text-base text-slate-500 font-medium ml-2 bg-slate-100 px-2 py-1 rounded-md">${yearText}</span>`;
+            
+            // 차트 합계 계산 및 표시
+            const currentTotal = chartData.reduce((sum, val) => sum + val, 0);
+            chartTitle.innerHTML = `
+                <div class="flex flex-wrap items-center gap-2">
+                    <i class="ph ph-chart-bar text-blue-500"></i>
+                    <span class="text-slate-800">${item.name}</span> 입고 추이
+                    <span class="text-base text-slate-500 font-medium ml-1 bg-slate-100 px-2 py-1 rounded-md">${yearText}</span>
+                    <span class="text-base text-blue-700 font-extrabold bg-blue-50 px-3 py-1 rounded-lg border border-blue-200 ml-2">합계: ${currentTotal.toLocaleString()}개</span>
+                </div>
+            `;
 
             const wrapper = document.getElementById('chart-wrapper');
             const parentWidth = wrapper.parentElement.clientWidth;
@@ -752,12 +746,11 @@
             renderTable(filteredDates, chartData);
         }
 
-        // 📌 역순 정렬 확실하게 처리
         function renderYearFilter(activeDates) {
             const container = document.getElementById('year-filter-container');
             const years = [...new Set(activeDates.map(d => d.substring(0, 4)))];
             
-            years.sort((a, b) => b.localeCompare(a)); // 역순: 2026, 2025...
+            years.sort((a, b) => b.localeCompare(a)); 
             
             let html = `<button data-year="all" class="year-btn px-5 py-2 text-sm font-extrabold rounded-lg transition-all ${selectedYear === 'all' ? 'bg-slate-800 text-white shadow-md scale-105' : 'text-slate-600 hover:bg-slate-200 bg-white border border-slate-200'}">전체</button>`;
             
@@ -782,7 +775,20 @@
             container.classList.remove('hidden');
             tbody.innerHTML = '';
             const yearText = selectedYear === 'all' ? '전체 기간' : `${selectedYear}년도`;
-            title.innerHTML = `<i class="ph ph-table text-emerald-500"></i> 상세 입고 내역 <span class="text-sm font-normal text-slate-500 ml-2">(${yearText} 기준, 최신순 정렬)</span>`;
+            
+            // 상세 데이터 테이블 합계 계산 및 표시
+            const tableTotal = data.reduce((sum, val) => sum + val, 0);
+            title.innerHTML = `
+                <div class="flex items-center justify-between w-full">
+                    <div class="flex items-center gap-2">
+                        <i class="ph ph-table text-emerald-500"></i> 상세 입고 내역 
+                        <span class="text-sm font-normal text-slate-500 ml-1">(${yearText} 기준, 최신순 정렬)</span>
+                    </div>
+                    <span class="text-base text-emerald-700 font-extrabold bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200">
+                        총 입고량: ${tableTotal.toLocaleString()}개
+                    </span>
+                </div>
+            `;
 
             if (dates.length === 0) {
                 tbody.innerHTML = `<tr><td colspan=\"2\" class=\"px-6 py-10 text-center text-lg font-bold text-slate-400\">선택한 기간의 입고 내역이 없습니다.</td></tr>`;
