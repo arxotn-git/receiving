@@ -106,8 +106,8 @@
             <div class="p-6 border-b border-slate-100 shrink-0 bg-slate-50/50">
                 <div class="relative">
                     <i class="ph ph-magnifying-glass absolute left-6 top-1/2 transform -translate-y-1/2 text-slate-400 text-3xl"></i>
-                    <input type="text" id="search-input" value="" placeholder="검색어가 없으면 최근 입고 품목 6개가 표시됩니다." 
-                           class="w-full pl-16 pr-8 py-5 text-2xl font-black border-4 border-slate-300 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm placeholder:font-medium placeholder:text-slate-400 text-slate-800 tracking-tight">
+                    <input type="text" id="search-input" value="" placeholder="상품을 검색해 주세요." 
+                           class="w-full pl-16 pr-8 py-5 text-2xl font-black border-4 border-slate-300 rounded-2xl focus:outline-none focus:ring-4 focus:ring-red-500/20 focus:border-red-400 transition-all shadow-sm placeholder:font-medium placeholder:text-red-400 text-slate-800 tracking-tight">
                 </div>
             </div>
 
@@ -256,8 +256,8 @@
         const style = document.createElement('style');
         style.innerHTML = `@keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } } .shake { animation: shake 0.4s ease-in-out; }`;
         document.head.appendChild(style);
-        checkAuth();
 
+        // ✅ Firebase 초기화를 checkAuth() 이전에 먼저 실행 (핵심 버그 수정)
         const firebaseConfig = {
             apiKey: "AIzaSyDWB700tZ3-OTSuHFOGT9FTQzagUu6Y_N0",
             authDomain: "receiving-187d4.firebaseapp.com",
@@ -279,12 +279,16 @@
             cloudStatus.innerHTML = `<i class="ph ph-warning-circle text-red-500 text-lg"></i> <span class="text-red-600">DB 초기화 실패</span>`;
         }
 
+        // ✅ Firebase 초기화 완료 후 인증 체크
+        checkAuth();
+
         let globalData = {};
         let allDates = new Set();
         let chartInstance = null;
         let chartType = 'bar';
         let selectedItemKey = null;
         let selectedYear = 'all';
+        let isUploading = false; // ✅ 업로드 중 onSnapshot 충돌 방지 플래그
 
         const DATA_START_COL_INDEX = 78;
         const ITEM_CODE_COL = '상품코드';
@@ -312,6 +316,9 @@
             const itemsRef = collection(db, 'artifacts', appId, 'public', 'data', 'items');
             
             onSnapshot(itemsRef, (snapshot) => {
+                // ✅ 업로드 중에는 onSnapshot이 globalData를 덮어쓰지 않도록 방어
+                if (isUploading) return;
+
                 globalData = {};
                 allDates.clear();
                 let loadedCount = 0;
@@ -372,6 +379,7 @@
         }
 
         async function processFiles(files) {
+            isUploading = true; // ✅ 업로드 시작: onSnapshot 충돌 차단
             statusContainer.classList.remove('hidden');
             loadingSpinner.classList.remove('hidden');
             statusText.innerText = "엑셀 파싱 및 데이터 덮어쓰기 중...";
@@ -425,6 +433,14 @@
             }
 
             loadingSpinner.classList.add('hidden');
+            
+            // ✅ 업로드 완료: 플래그 해제 후 UI 갱신
+            isUploading = false;
+            renderItemList(searchInput.value);
+            if (selectedItemKey && globalData[selectedItemKey]) {
+                renderChart(selectedItemKey);
+            }
+
             setTimeout(() => { 
                 statusContainer.classList.add('hidden'); 
                 statusText.classList.replace('text-emerald-700', 'text-blue-700');
@@ -561,7 +577,16 @@
 
         function renderItemList(filterText = '') {
             itemList.innerHTML = '';
-            
+
+            // ✅ 검색어 없으면 목록 숨기고 종료
+            if (!filterText.trim()) {
+                itemCount.innerText = `0건`;
+                itemList.classList.add('hidden');
+                return;
+            }
+
+            itemList.classList.remove('hidden');
+
             let items = Object.entries(globalData).map(([key, item]) => {
                 const datesObj = item.dates || {};
                 const activeDates = Object.keys(datesObj).filter(d => datesObj[d] > 0).sort();
@@ -574,31 +599,28 @@
                 return item.activeDates.length > 0 && !safeName.includes('알수없는상품') && safeCode !== 'UNKNOWN';
             });
 
-            if (!filterText.trim()) {
-                items.sort((a, b) => b.latestDate.localeCompare(a.latestDate));
-                itemCount.innerText = `최근 입고된 6건 표시 (전체 데이터 ${items.length}건)`;
-            } else {
-                const lowerFilter = filterText.toLowerCase();
-                items = items.filter(i => (i.name||'').toLowerCase().includes(lowerFilter) || (i.code||'').toLowerCase().includes(lowerFilter));
-                items.sort((a, b) => b.totalInbound - a.totalInbound);
-                itemCount.innerText = `${Math.min(items.length, 6)}건 표시 (검색결과 ${items.length}건)`;
-            }
+            const lowerFilter = filterText.toLowerCase();
+            items = items.filter(i => (i.name||'').toLowerCase().includes(lowerFilter) || (i.code||'').toLowerCase().includes(lowerFilter));
+            items.sort((a, b) => b.totalInbound - a.totalInbound);
+            itemCount.innerText = `${Math.min(items.length, 6)}건 표시 (검색결과 ${items.length}건)`;
 
-            const displayItems = items.slice(0, 6); 
+            const displayItems = items.slice(0, 6);
 
             if (displayItems.length === 0) {
                 itemList.innerHTML = `<li class="col-span-full p-6 text-center text-lg font-bold text-slate-400 mt-4">조건에 맞는 품목이 없거나 입고 이력이 없습니다.</li>`;
                 return;
             }
 
-            displayItems.forEach(item => {
+            displayItems.forEach((item, index) => {
                 const li = document.createElement('li');
-                const isSelected = selectedItemKey === item.key;
-                
+                // ✅ 첫 번째 항목은 항상 선택 스타일
+                const isFirst = index === 0;
+                const isSelected = isFirst || selectedItemKey === item.key;
+
                 li.className = `p-5 border cursor-pointer transition-all flex flex-col justify-between gap-3 rounded-2xl shadow-sm hover:-translate-y-1 hover:shadow-md ${isSelected ? 'bg-blue-50 border-blue-400 ring-2 ring-blue-400' : 'bg-white border-slate-200 hover:border-blue-300'}`;
-                
+
                 li.addEventListener('click', () => selectItem(item.key, li));
-                
+
                 li.innerHTML = `
                     <div>
                         <div class="flex items-center gap-1 text-xs font-bold text-slate-400 mb-2">
@@ -612,6 +634,14 @@
                     </div>
                 `;
                 itemList.appendChild(li);
+
+                // ✅ 첫 번째 항목 자동으로 그래프·상세 테이블 렌더링
+                if (isFirst) {
+                    selectedItemKey = item.key;
+                    selectedYear = 'all';
+                    chartOverlay.classList.add('hidden');
+                    renderChart(item.key);
+                }
             });
         }
 
