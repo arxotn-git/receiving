@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>이지어드민 품목별 입고 현황 대시보드 (v10)</title>
+    <title>입고 데이터 분석기 (v15)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -15,8 +15,8 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: #f8fafc; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        
-        #drop-zone.dragover {
+
+        #drop-zone.dragover, #drop-zone-cl.dragover {
             background-color: #eff6ff;
             border-color: #3b82f6;
             transform: scale(1.02);
@@ -32,11 +32,16 @@
             z-index: 9999;
             backdrop-filter: blur(10px);
         }
-        
+
         body:not(.authenticated) main,
         body:not(.authenticated) header {
             display: none !important;
         }
+
+        .tab-btn { border-bottom-width: 3px; margin-bottom: -2px; cursor: pointer; }
+        .tab-btn.tab-active { border-color: #2563eb; color: #2563eb; }
+        .tab-btn.tab-inactive { border-color: transparent; color: #64748b; }
+        .tab-btn.tab-inactive:hover { color: #334155; border-color: #cbd5e1; }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen flex flex-col text-slate-800">
@@ -48,18 +53,18 @@
             </div>
             <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight">관리자 인증</h2>
             <p class="text-sm text-slate-500 mt-3 font-medium px-4 leading-relaxed">
-                이지어드민 입고 데이터에 접근하시려면<br>비밀번호를 입력해주세요.
+                입고 데이터에 접근하시려면<br>비밀번호를 입력해주세요.
             </p>
             <form id="auth-form" class="w-full mt-8">
                 <div class="relative group">
-                    <input type="password" id="password-input" 
-                        class="w-full px-5 py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl text-center text-lg tracking-[0.3em] font-bold text-slate-700 focus:outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all placeholder:tracking-normal placeholder:font-normal placeholder:text-slate-400" 
+                    <input type="password" id="password-input"
+                        class="w-full px-5 py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl text-center text-lg tracking-[0.3em] font-bold text-slate-700 focus:outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all placeholder:tracking-normal placeholder:font-normal placeholder:text-slate-400"
                         placeholder="비밀번호 입력">
                     <p id="auth-error" class="text-rose-500 text-xs font-bold mt-3 h-4 opacity-0 transition-opacity">
                         비밀번호가 일치하지 않습니다
                     </p>
                 </div>
-                <button type="submit" 
+                <button type="submit"
                     class="w-full mt-4 bg-slate-900 hover:bg-indigo-600 text-white font-bold py-4 px-6 rounded-2xl transition-all duration-200 shadow-[0_4px_14px_0_rgba(0,0,0,0.1)] hover:shadow-[0_6px_20px_rgba(79,70,229,0.23)] active:scale-[0.98]">
                     확인
                 </button>
@@ -72,7 +77,7 @@
             <i class="ph ph-chart-line-up text-3xl text-blue-600"></i>
             <div>
                 <h1 class="text-xl font-bold text-slate-900 flex items-center gap-3">
-                    이지어드민 입고 데이터 분석기 <span class="text-blue-500">(v10)</span>
+                    입고 데이터 분석기 <span class="text-blue-500">(v15)</span>
                     <div id="cloud-status" class="flex items-center gap-1.5 px-3 py-1 bg-slate-100 text-slate-500 rounded-full text-xs font-medium transition-colors">
                         <i class="ph ph-spinner-gap animate-spin text-lg"></i>
                         <span>클라우드 연결 준비중...</span>
@@ -96,20 +101,35 @@
     </header>
 
     <main class="flex-1 p-6 gap-6 flex flex-col w-full max-w-[1600px] mx-auto">
-        
+
+        <!-- 탭 전환 바 (메인 타이틀 제외 최상단) -->
+        <div class="w-full flex items-center gap-1 border-b-2 border-slate-200 shrink-0">
+            <button id="tab-btn-ez" type="button" class="tab-btn tab-active px-5 py-3 text-sm font-extrabold transition-colors flex items-center gap-2">
+                <i class="ph ph-archive"></i> 이지어드민 (과거 이력)
+            </button>
+            <button id="tab-btn-cl" type="button" class="tab-btn tab-inactive px-5 py-3 text-sm font-extrabold transition-colors flex items-center gap-2">
+                <i class="ph ph-truck"></i> CL 시스템 (신규 입고)
+            </button>
+        </div>
+
+        <!-- =========================================================== -->
+        <!-- TAB 1: 이지어드민 (과거 이력) — v10과 100% 동일, ID/로직 변경 없음 -->
+        <!-- =========================================================== -->
+        <div id="tab-content-ez" class="flex flex-col gap-6">
+
         <div class="w-full bg-white border border-slate-200 rounded-xl flex flex-col overflow-hidden shadow-sm shrink-0">
             <div class="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center shrink-0">
                 <h3 class="font-bold flex items-center gap-2 text-lg">
                     <i class="ph ph-list-dashes text-slate-500"></i>
-                    분석 대상 품목 목록
+                    이지어드민 품목 목록
                 </h3>
                 <span id="item-count" class="text-sm font-semibold bg-slate-200 text-slate-700 px-3 py-1.5 rounded-full">0건</span>
             </div>
-            
+
             <div class="p-6 border-b border-slate-100 shrink-0 bg-slate-50/50">
                 <div class="relative">
                     <i class="ph ph-magnifying-glass absolute left-6 top-1/2 transform -translate-y-1/2 text-slate-400 text-3xl"></i>
-                    <input type="text" id="search-input" value="" placeholder="상품을 검색해 주세요." 
+                    <input type="text" id="search-input" value="" placeholder="상품을 검색해 주세요."
                            class="w-full pl-16 pr-8 py-5 text-2xl font-black border-4 border-slate-300 rounded-2xl focus:outline-none focus:ring-4 focus:ring-red-500/20 focus:border-red-400 transition-all shadow-sm placeholder:font-medium placeholder:text-red-400 text-slate-800 tracking-tight">
                 </div>
             </div>
@@ -138,7 +158,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="flex-1 relative w-full h-full overflow-hidden border border-slate-100 rounded-xl bg-slate-50/50">
                 <div id="chart-scroll-container" class="w-full h-full overflow-x-auto overflow-y-hidden custom-scrollbar pb-3 pt-6">
                     <div id="chart-wrapper" class="h-full relative transition-all" style="width: 100%;">
@@ -170,8 +190,8 @@
                 </table>
             </div>
         </div>
-        
-        <div class="w-full mt-6 pb-10">
+
+        <div class="w-full pb-2">
             <div id="drop-zone" class="bg-white border-2 border-dashed border-slate-300 rounded-2xl p-10 text-center transition-all flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 hover:border-blue-400">
                 <input type="file" id="file-input" multiple accept=".xlsx, .xls, .csv" class="hidden">
                 <i class="ph ph-file-xls text-5xl text-slate-400 mb-4"></i>
@@ -191,6 +211,112 @@
             </div>
         </div>
 
+        </div>
+        <!-- ================= /TAB 1: 이지어드민 ================= -->
+
+
+        <!-- =========================================================== -->
+        <!-- TAB 2: CL 시스템 (신규 입고) — 완전히 독립된 신규 탭 -->
+        <!-- =========================================================== -->
+        <div id="tab-content-cl" class="hidden flex-col gap-6">
+
+        <div class="w-full bg-white border border-slate-200 rounded-xl flex flex-col overflow-hidden shadow-sm shrink-0">
+            <div class="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center shrink-0">
+                <h3 class="font-bold flex items-center gap-2 text-lg">
+                    <i class="ph ph-list-dashes text-slate-500"></i>
+                    CL 시스템 품목 목록
+                </h3>
+                <span id="item-count-cl" class="text-sm font-semibold bg-slate-200 text-slate-700 px-3 py-1.5 rounded-full">0건</span>
+            </div>
+
+            <div class="p-6 border-b border-slate-100 shrink-0 bg-slate-50/50">
+                <div class="relative">
+                    <i class="ph ph-magnifying-glass absolute left-6 top-1/2 transform -translate-y-1/2 text-slate-400 text-3xl"></i>
+                    <input type="text" id="search-input-cl" value="" placeholder="품명을 검색해 주세요."
+                           class="w-full pl-16 pr-8 py-5 text-2xl font-black border-4 border-slate-300 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-400 transition-all shadow-sm placeholder:font-medium placeholder:text-blue-400 text-slate-800 tracking-tight">
+                </div>
+            </div>
+
+            <ul id="item-list-cl" class="overflow-y-auto custom-scrollbar p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 content-start max-h-[360px]">
+                <li class="col-span-full p-4 text-center text-slate-400 mt-4 font-bold">
+                    데이터를 로딩 중이거나 업로드 대기 중입니다.
+                </li>
+            </ul>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col w-full h-[650px] shrink-0 relative">
+            <div class="flex flex-wrap justify-between items-center mb-6 shrink-0 gap-4">
+                <h3 id="chart-title-cl" class="font-bold text-xl flex items-center gap-2">
+                    <i class="ph ph-chart-bar text-blue-500"></i>
+                    기간별 입고 흐름
+                </h3>
+                <div class="flex items-center gap-4">
+                    <div id="year-filter-container-cl" class="flex flex-wrap gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200">
+                        <span class="text-sm text-slate-400 py-1.5 px-3 font-bold">품목을 선택하세요</span>
+                    </div>
+                    <div class="w-px h-8 bg-slate-300"></div>
+                    <div class="flex gap-1 bg-slate-100 p-1 rounded-lg">
+                        <button id="btn-chart-line-cl" class="px-4 py-2 text-sm font-bold bg-transparent text-slate-600 rounded-md hover:bg-slate-200 transition-colors">선 차트</button>
+                        <button id="btn-chart-bar-cl" class="px-4 py-2 text-sm font-bold bg-white text-blue-600 border-none shadow-sm rounded-md transition-colors active">막대 차트</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex-1 relative w-full h-full overflow-hidden border border-slate-100 rounded-xl bg-slate-50/50">
+                <div id="chart-scroll-container-cl" class="w-full h-full overflow-x-auto overflow-y-hidden custom-scrollbar pb-3 pt-6">
+                    <div id="chart-wrapper-cl" class="h-full relative transition-all" style="width: 100%;">
+                        <canvas id="inboundChart-cl"></canvas>
+                    </div>
+                </div>
+                <div id="chart-overlay-cl" class="absolute inset-0 flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm z-10 rounded-xl">
+                    <i class="ph ph-magnifying-glass-plus text-6xl text-slate-300 mb-4"></i>
+                    <p class="text-slate-500 font-bold text-xl">상단 목록에서 분석할 품목을 선택하십시오.</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="table-container-cl" class="hidden bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col w-full shrink-0">
+            <h3 id="table-title-cl" class="font-bold text-lg flex items-center gap-2 mb-4">
+                <i class="ph ph-table text-emerald-500"></i>
+                상세 입고 내역 (최신순)
+            </h3>
+            <div class="border border-slate-200 rounded-xl overflow-hidden">
+                <table class="w-full text-base text-left text-slate-600">
+                    <thead class="text-sm text-slate-700 uppercase bg-slate-100 border-b border-slate-200">
+                        <tr>
+                            <th scope="col" class="px-6 py-4 w-1/2 font-extrabold">입고 일자</th>
+                            <th scope="col" class="px-6 py-4 w-1/2 text-right font-extrabold">입고 수량</th>
+                        </tr>
+                    </thead>
+                    <tbody id="data-table-body-cl" class="divide-y divide-slate-100">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="w-full pb-2">
+            <div id="drop-zone-cl" class="bg-white border-2 border-dashed border-slate-300 rounded-2xl p-10 text-center transition-all flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 hover:border-blue-400">
+                <input type="file" id="file-input-cl" multiple accept=".xlsx, .xls, .csv" class="hidden">
+                <i class="ph ph-file-xls text-5xl text-slate-400 mb-4"></i>
+                <h3 class="font-bold text-lg mb-2 text-slate-700">CL(다산물류) 입고 엑셀 업로드</h3>
+                <p class="text-sm text-slate-500 mb-4 font-medium">클릭하거나 CL 입고 엑셀 파일들을 드래그하세요. 겹치는 품목·날짜는 최신 데이터로 깔끔하게 덮어씁니다.</p>
+                <div class="flex items-center gap-2 text-xs bg-slate-100 text-slate-600 px-4 py-2 rounded-lg font-medium border border-slate-200">
+                    <i class="ph ph-gear"></i>
+                    <span>인식 열: <span class="font-bold text-slate-800">품명 / 입고수량 / 입고일자</span></span>
+                </div>
+            </div>
+            <div id="status-container-cl" class="hidden mt-4 bg-blue-50 border border-blue-200 rounded-xl p-5 shadow-sm">
+                <div class="flex items-center gap-3 text-blue-700 font-bold text-base mb-1">
+                    <i class="ph ph-spinner-gap animate-spin text-xl" id="loading-spinner-cl"></i>
+                    <span id="status-text-cl">상태 메시지</span>
+                </div>
+                <div class="text-sm text-blue-600 mt-1 pl-8 font-medium" id="status-detail-cl">세부 설명이 이곳에 표시됩니다.</div>
+            </div>
+        </div>
+
+        </div>
+        <!-- ================= /TAB 2: CL 시스템 ================= -->
+
     </main>
 
     <script>
@@ -205,6 +331,25 @@
         }
 
         Chart.register(ChartDataLabels);
+
+        // 탭 전환: DOM 존재 즉시 바인딩 (인증/파이어베이스 로딩과 무관하게 항상 동작)
+        function switchTab(tab) {
+            const isEz = tab === 'ez';
+            document.getElementById('tab-content-ez').classList.toggle('hidden', !isEz);
+            document.getElementById('tab-content-ez').classList.toggle('flex', isEz);
+            document.getElementById('tab-content-cl').classList.toggle('hidden', isEz);
+            document.getElementById('tab-content-cl').classList.toggle('flex', !isEz);
+
+            const btnEz = document.getElementById('tab-btn-ez');
+            const btnCl = document.getElementById('tab-btn-cl');
+            btnEz.classList.toggle('tab-active', isEz);
+            btnEz.classList.toggle('tab-inactive', !isEz);
+            btnCl.classList.toggle('tab-active', !isEz);
+            btnCl.classList.toggle('tab-inactive', isEz);
+        }
+        document.getElementById('tab-btn-ez').addEventListener('click', () => switchTab('ez'));
+        document.getElementById('tab-btn-cl').addEventListener('click', () => switchTab('cl'));
+        switchTab('ez');
     </script>
 
     <script type="module">
@@ -221,7 +366,8 @@
             if (localStorage.getItem('ezadmin_auth') === 'true') {
                 authOverlay.style.display = 'none';
                 document.body.classList.add('authenticated');
-                initCloudApp(); 
+                initCloudApp();
+                initCLCloudApp();
             } else {
                 passwordInput.focus();
             }
@@ -237,12 +383,13 @@
                     authOverlay.style.display = 'none';
                     document.body.classList.add('authenticated');
                     initCloudApp();
+                    initCLCloudApp();
                 }, 300);
             } else {
                 authError.style.opacity = '1';
                 passwordInput.value = '';
                 passwordInput.focus();
-                
+
                 authOverlay.querySelector('.bg-white').classList.add('shake');
                 setTimeout(() => { authOverlay.querySelector('.bg-white').classList.remove('shake'); }, 400);
             }
@@ -275,13 +422,16 @@
 
         checkAuth();
 
+        /* =====================================================================
+           TAB 1: 이지어드민 로직 — v10과 완전히 동일 (변수/함수명 무변경)
+        ===================================================================== */
         let globalData = {};
         let allDates = new Set();
         let chartInstance = null;
         let chartType = 'bar';
         let selectedItemKey = null;
         let selectedYear = 'all';
-        let isUploading = false; 
+        let isUploading = false;
 
         const DATA_START_COL_INDEX = 78;
         const ITEM_CODE_COL = '상품코드';
@@ -300,37 +450,35 @@
         const chartOverlay = document.getElementById('chart-overlay');
         const chartTitle = document.getElementById('chart-title');
 
-        // 📌 실시간 동기화 로직
         function initCloudApp() {
             if (!db) return;
             cloudStatus.innerHTML = `<i class="ph ph-spinner-gap animate-spin text-blue-500 text-lg"></i> <span class="text-blue-600">데이터 동기화 중...</span>`;
             cloudStatus.className = "flex items-center gap-1.5 px-3 py-1 bg-blue-50 border border-blue-200 rounded-full text-xs font-bold transition-colors";
 
             const itemsRef = collection(db, 'artifacts', appId, 'public', 'data', 'items');
-            
+
             onSnapshot(itemsRef, (snapshot) => {
                 if (isUploading) return;
 
                 globalData = {};
                 allDates.clear();
                 let loadedCount = 0;
-                
+
                 snapshot.forEach(docSnap => {
                     const data = docSnap.data();
                     if(data.originalKey) {
                         if(!data.dates) data.dates = {};
-                        globalData[data.originalKey] = data; 
+                        globalData[data.originalKey] = data;
                         Object.keys(data.dates).forEach(d => allDates.add(d));
                         loadedCount++;
                     }
                 });
 
-                // 텍스트 통일 및 색상 적용
                 cloudStatus.innerHTML = `<i class="ph ph-cloud-check text-emerald-500 text-lg"></i> <span class="text-emerald-600">실시간 연동 완료 (${loadedCount}건)</span>`;
                 cloudStatus.className = "flex items-center gap-1.5 px-3 py-1 bg-emerald-50 border border-emerald-200 rounded-full text-xs font-bold transition-colors cursor-pointer";
-                
+
                 renderItemList(searchInput.value);
-                
+
                 if (selectedItemKey && globalData[selectedItemKey]) {
                     renderChart(selectedItemKey);
                 }
@@ -355,7 +503,7 @@
         fileInput.addEventListener('change', (e) => {
             if (e.target.files.length > 0) processFiles(e.target.files);
         });
-        
+
         searchInput.addEventListener('input', (e) => renderItemList(e.target.value));
 
         document.getElementById('btn-chart-line').addEventListener('click', (e) => changeChartType('line', e.target));
@@ -370,7 +518,7 @@
         }
 
         async function processFiles(files) {
-            isUploading = true; 
+            isUploading = true;
             statusContainer.classList.remove('hidden');
             loadingSpinner.classList.remove('hidden');
             statusText.innerText = "엑셀 파싱 및 데이터 덮어쓰기 중...";
@@ -394,7 +542,7 @@
                     if (!key) continue;
                     const safeKey = key.replace(/[\/\\.#$\[\]]/g, '_');
                     const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'items', safeKey);
-                    
+
                     batch.set(docRef, { ...item, originalKey: key }, { merge: true });
                     writeCount++;
 
@@ -424,15 +572,15 @@
             }
 
             loadingSpinner.classList.add('hidden');
-            
+
             isUploading = false;
             renderItemList(searchInput.value);
             if (selectedItemKey && globalData[selectedItemKey]) {
                 renderChart(selectedItemKey);
             }
 
-            setTimeout(() => { 
-                statusContainer.classList.add('hidden'); 
+            setTimeout(() => {
+                statusContainer.classList.add('hidden');
                 statusText.classList.replace('text-emerald-700', 'text-blue-700');
                 statusText.classList.replace('text-red-700', 'text-blue-700');
                 statusContainer.classList.replace('bg-emerald-50', 'bg-blue-50');
@@ -440,7 +588,7 @@
                 statusContainer.classList.replace('border-emerald-200', 'border-blue-200');
                 statusContainer.classList.replace('border-red-200', 'border-blue-200');
             }, 4000);
-            
+
             fileInput.value = '';
         }
 
@@ -470,7 +618,7 @@
                 return `${fileYear}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
             }
             let nums = str.match(/\d+/g);
-            if (!nums || nums.length < 2) return null; 
+            if (!nums || nums.length < 2) return null;
             let m, d;
             if (nums.length === 2) {
                 m = parseInt(nums[0]); d = parseInt(nums[1]);
@@ -498,7 +646,7 @@
                         const firstSheetName = workbook.SheetNames[0];
                         const worksheet = workbook.Sheets[firstSheetName];
                         const json = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
-                        
+
                         if (json.length < 2) { resolve(); return; }
 
                         let headerRowIdx = 0;
@@ -513,8 +661,8 @@
                         let nameIdx = headers.findIndex(h => h && String(h).trim() === ITEM_NAME_COL);
                         let optIdx = headers.findIndex(h => h && String(h).trim() === ITEM_OPT_COL);
 
-                        if (codeIdx === -1) codeIdx = 1; 
-                        if (nameIdx === -1) nameIdx = 14; 
+                        if (codeIdx === -1) codeIdx = 1;
+                        if (nameIdx === -1) nameIdx = 14;
                         if (optIdx === -1) optIdx = 15;
 
                         const dateCols = [];
@@ -548,7 +696,7 @@
                                 if (typeof rawVal === 'string') rawVal = rawVal.replace(/,/g, '');
                                 const val = parseInt(rawVal) || 0;
                                 if (val > 0) {
-                                    globalData[key].dates[col.dateStr] = val; 
+                                    globalData[key].dates[col.dateStr] = val;
                                 }
                             });
                         }
@@ -640,7 +788,7 @@
             selectedItemKey = key;
             selectedYear = 'all';
             chartOverlay.classList.add('hidden');
-            
+
             renderChart(key);
         }
 
@@ -649,18 +797,17 @@
             const item = globalData[key];
             const datesObj = item.dates || {};
             const activeDates = Object.keys(datesObj).filter(d => datesObj[d] > 0).sort();
-            
+
             renderYearFilter(activeDates);
 
             let filteredDates = activeDates;
             if (selectedYear !== 'all') {
                 filteredDates = activeDates.filter(d => d.startsWith(selectedYear));
             }
-            
+
             const chartData = filteredDates.map(d => datesObj[d]);
             const yearText = selectedYear === 'all' ? '전체 기간' : `${selectedYear}년도`;
-            
-            // 차트 합계 계산 및 표시
+
             const currentTotal = chartData.reduce((sum, val) => sum + val, 0);
             chartTitle.innerHTML = `
                 <div class="flex flex-wrap items-center gap-2">
@@ -677,7 +824,7 @@
             wrapper.style.width = calculatedWidth + 'px';
 
             const ctx = document.getElementById('inboundChart').getContext('2d');
-            
+
             if (chartInstance) chartInstance.destroy();
 
             chartInstance = new Chart(ctx, {
@@ -715,15 +862,15 @@
                             }
                         },
                         datalabels: {
-                            color: '#475569', 
+                            color: '#475569',
                             anchor: 'end',
                             align: 'top',
                             offset: 6,
                             font: { weight: '900', size: 13, family: 'Pretendard' },
                             formatter: function(value, context) {
-                                if (!value || value === 0) return ''; 
+                                if (!value || value === 0) return '';
                                 const dateStr = context.chart.data.labels[context.dataIndex] || '';
-                                const shortDate = dateStr.length >= 8 ? dateStr.substring(2) : dateStr; 
+                                const shortDate = dateStr.length >= 8 ? dateStr.substring(2) : dateStr;
                                 return value.toLocaleString() + '\n(' + shortDate + ')';
                             },
                             textAlign: 'center'
@@ -732,7 +879,7 @@
                     scales: {
                         x: { grid: { display: false, drawBorder: false }, ticks: { font: { family: 'Pretendard', weight: 'bold', size: 12 }, color: '#64748b' } },
                         y: {
-                            beginAtZero: false, grace: '20%', 
+                            beginAtZero: false, grace: '20%',
                             grid: { color: 'rgba(226, 232, 240, 0.6)', drawBorder: false, borderDash: [5, 5] },
                             ticks: {
                                 font: { family: 'Pretendard', weight: 'bold' }, color: '#94a3b8',
@@ -749,16 +896,16 @@
         function renderYearFilter(activeDates) {
             const container = document.getElementById('year-filter-container');
             const years = [...new Set(activeDates.map(d => d.substring(0, 4)))];
-            
-            years.sort((a, b) => b.localeCompare(a)); 
-            
+
+            years.sort((a, b) => b.localeCompare(a));
+
             let html = `<button data-year="all" class="year-btn px-5 py-2 text-sm font-extrabold rounded-lg transition-all ${selectedYear === 'all' ? 'bg-slate-800 text-white shadow-md scale-105' : 'text-slate-600 hover:bg-slate-200 bg-white border border-slate-200'}">전체</button>`;
-            
+
             years.forEach(y => {
                 html += `<button data-year="${y}" class="year-btn px-5 py-2 text-sm font-extrabold rounded-lg transition-all ${selectedYear === y ? 'bg-slate-800 text-white shadow-md scale-105' : 'text-slate-600 hover:bg-slate-200 bg-white border border-slate-200'}">${y}년</button>`;
             });
             container.innerHTML = html;
-            
+
             container.querySelectorAll('.year-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     selectedYear = e.target.getAttribute('data-year');
@@ -771,17 +918,541 @@
             const container = document.getElementById('table-container');
             const tbody = document.getElementById('data-table-body');
             const title = document.getElementById('table-title');
-            
+
             container.classList.remove('hidden');
             tbody.innerHTML = '';
             const yearText = selectedYear === 'all' ? '전체 기간' : `${selectedYear}년도`;
-            
-            // 상세 데이터 테이블 합계 계산 및 표시
+
             const tableTotal = data.reduce((sum, val) => sum + val, 0);
             title.innerHTML = `
                 <div class="flex items-center justify-between w-full">
                     <div class="flex items-center gap-2">
-                        <i class="ph ph-table text-emerald-500"></i> 상세 입고 내역 
+                        <i class="ph ph-table text-emerald-500"></i> 상세 입고 내역
+                        <span class="text-sm font-normal text-slate-500 ml-1">(${yearText} 기준, 최신순 정렬)</span>
+                    </div>
+                    <span class="text-base text-emerald-700 font-extrabold bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200">
+                        총 입고량: ${tableTotal.toLocaleString()}개
+                    </span>
+                </div>
+            `;
+
+            if (dates.length === 0) {
+                tbody.innerHTML = `<tr><td colspan=\"2\" class=\"px-6 py-10 text-center text-lg font-bold text-slate-400\">선택한 기간의 입고 내역이 없습니다.</td></tr>`;
+                return;
+            }
+
+            const combined = dates.map((date, i) => ({ date, val: data[i] }));
+            combined.sort((a, b) => b.date.localeCompare(a.date));
+
+            combined.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = "bg-white hover:bg-slate-50 transition-colors";
+                tr.innerHTML = `
+                    <td class="px-6 py-5 font-bold text-slate-800 text-base">${item.date}</td>
+                    <td class="px-6 py-5 text-right font-extrabold text-blue-600 text-lg">${item.val.toLocaleString()} <span class="text-sm font-semibold text-slate-400 ml-1">개</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        /* =====================================================================
+           TAB 2: CL 시스템 로직 — 완전히 독립 (별도 변수/DOM/Firestore 컬렉션)
+           엑셀 형식: 행 단위, 열 = 품명 / 입고수량 / 입고일자
+        ===================================================================== */
+        let clGlobalData = {};
+        let clChartInstance = null;
+        let clChartType = 'bar';
+        let clSelectedItemKey = null;
+        let clSelectedYear = 'all';
+        let clIsUploading = false;
+
+        const CL_NAME_COL = '품명';
+        const CL_QTY_COL = '입고수량';
+        const CL_DATE_COL = '입고일자';
+
+        const dropZoneCL = document.getElementById('drop-zone-cl');
+        const fileInputCL = document.getElementById('file-input-cl');
+        const statusContainerCL = document.getElementById('status-container-cl');
+        const statusTextCL = document.getElementById('status-text-cl');
+        const statusDetailCL = document.getElementById('status-detail-cl');
+        const loadingSpinnerCL = document.getElementById('loading-spinner-cl');
+        const itemListCL = document.getElementById('item-list-cl');
+        const itemCountCL = document.getElementById('item-count-cl');
+        const searchInputCL = document.getElementById('search-input-cl');
+        const chartOverlayCL = document.getElementById('chart-overlay-cl');
+        const chartTitleCL = document.getElementById('chart-title-cl');
+
+        function initCLCloudApp() {
+            if (!db) return;
+            const clItemsRef = collection(db, 'artifacts', appId, 'public', 'data', 'cl_items');
+
+            onSnapshot(clItemsRef, (snapshot) => {
+                if (clIsUploading) return;
+
+                clGlobalData = {};
+                let loadedCount = 0;
+
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    if (data.originalKey) {
+                        if (!data.dates) data.dates = {};
+                        clGlobalData[data.originalKey] = data;
+                        loadedCount++;
+                    }
+                });
+
+                renderItemListCL(searchInputCL.value);
+
+                if (clSelectedItemKey && clGlobalData[clSelectedItemKey]) {
+                    renderChartCL(clSelectedItemKey);
+                }
+            }, (error) => {
+                console.error("CL 클라우드 연동 에러:", error);
+            });
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZoneCL.addEventListener(eventName, () => dropZoneCL.classList.add('dragover'), false);
+        });
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZoneCL.addEventListener(eventName, () => dropZoneCL.classList.remove('dragover'), false);
+        });
+
+        dropZoneCL.addEventListener('click', () => fileInputCL.click());
+        dropZoneCL.addEventListener('drop', (e) => {
+            if (e.dataTransfer.files.length > 0) processFilesCL(e.dataTransfer.files);
+        });
+        fileInputCL.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) processFilesCL(e.target.files);
+        });
+
+        searchInputCL.addEventListener('input', (e) => renderItemListCL(e.target.value));
+
+        document.getElementById('btn-chart-line-cl').addEventListener('click', (e) => changeChartTypeCL('line', e.target));
+        document.getElementById('btn-chart-bar-cl').addEventListener('click', (e) => changeChartTypeCL('bar', e.target));
+
+        function changeChartTypeCL(type, btn) {
+            clChartType = type;
+            document.getElementById('btn-chart-line-cl').className = "px-4 py-2 text-sm font-bold bg-transparent text-slate-600 rounded-md hover:bg-slate-200 transition-colors";
+            document.getElementById('btn-chart-bar-cl').className = "px-4 py-2 text-sm font-bold bg-transparent text-slate-600 rounded-md hover:bg-slate-200 transition-colors";
+            btn.className = "px-4 py-2 text-sm font-bold bg-white text-blue-600 border-none shadow-sm rounded-md transition-colors active";
+            if (clSelectedItemKey) renderChartCL(clSelectedItemKey);
+        }
+
+        async function processFilesCL(files) {
+            clIsUploading = true;
+            statusContainerCL.classList.remove('hidden');
+            loadingSpinnerCL.classList.remove('hidden');
+            statusTextCL.innerText = "엑셀 파싱 및 데이터 덮어쓰기 중...";
+            statusDetailCL.innerText = `총 ${files.length}개 파일 처리 중`;
+            chartOverlayCL.classList.remove('hidden');
+
+            let anyFileFailed = false;
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const ok = await parseExcelCL(file);
+                if (!ok) anyFileFailed = true;
+                statusDetailCL.innerText = `${i + 1} / ${files.length} 엑셀 파싱 완료 (${file.name})`;
+            }
+
+            statusTextCL.innerText = "파이어베이스 동기화 중...";
+            statusDetailCL.innerText = "병합된 데이터를 클라우드에 안전하게 저장하고 있습니다.";
+
+            try {
+                let batch = writeBatch(db);
+                let writeCount = 0;
+
+                for (const [key, item] of Object.entries(clGlobalData)) {
+                    if (!key) continue;
+                    const safeKey = key.replace(/[\/\\.#$\[\]]/g, '_');
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'cl_items', safeKey);
+
+                    batch.set(docRef, { ...item, originalKey: key }, { merge: true });
+                    writeCount++;
+
+                    if (writeCount >= 400) {
+                        await batch.commit();
+                        batch = writeBatch(db);
+                        writeCount = 0;
+                    }
+                }
+                if (writeCount > 0) {
+                    await batch.commit();
+                }
+
+                if (anyFileFailed) {
+                    statusTextCL.classList.replace('text-blue-700', 'text-amber-700');
+                    statusContainerCL.classList.replace('bg-blue-50', 'bg-amber-50');
+                    statusContainerCL.classList.replace('border-blue-200', 'border-amber-200');
+                    statusTextCL.innerText = "일부 파일 처리 실패";
+                    statusDetailCL.innerText = "품명/입고수량/입고일자 열을 찾지 못한 파일이 있습니다. 나머지는 정상 반영되었습니다.";
+                } else {
+                    statusTextCL.classList.replace('text-blue-700', 'text-emerald-700');
+                    statusContainerCL.classList.replace('bg-blue-50', 'bg-emerald-50');
+                    statusContainerCL.classList.replace('border-blue-200', 'border-emerald-200');
+                    statusTextCL.innerText = "업로드 및 병합 완료";
+                    statusDetailCL.innerText = "데이터가 성공적으로 병합 및 클라우드에 저장되었습니다.";
+                }
+
+            } catch (e) {
+                console.error("CL 클라우드 저장 에러:", e);
+                statusTextCL.classList.replace('text-blue-700', 'text-red-700');
+                statusContainerCL.classList.replace('bg-blue-50', 'bg-red-50');
+                statusContainerCL.classList.replace('border-blue-200', 'border-red-200');
+                statusTextCL.innerText = "클라우드 저장 실패";
+                statusDetailCL.innerText = "DB에 기록하는 중 오류가 발생했습니다. (" + e.message + ")";
+            }
+
+            loadingSpinnerCL.classList.add('hidden');
+
+            clIsUploading = false;
+            renderItemListCL(searchInputCL.value);
+            if (clSelectedItemKey && clGlobalData[clSelectedItemKey]) {
+                renderChartCL(clSelectedItemKey);
+            }
+
+            setTimeout(() => {
+                statusContainerCL.classList.add('hidden');
+                statusTextCL.classList.replace('text-emerald-700', 'text-blue-700');
+                statusTextCL.classList.replace('text-red-700', 'text-blue-700');
+                statusTextCL.classList.replace('text-amber-700', 'text-blue-700');
+                statusContainerCL.classList.replace('bg-emerald-50', 'bg-blue-50');
+                statusContainerCL.classList.replace('bg-red-50', 'bg-blue-50');
+                statusContainerCL.classList.replace('bg-amber-50', 'bg-blue-50');
+                statusContainerCL.classList.replace('border-emerald-200', 'border-blue-200');
+                statusContainerCL.classList.replace('border-red-200', 'border-blue-200');
+                statusContainerCL.classList.replace('border-amber-200', 'border-blue-200');
+            }, 4000);
+
+            fileInputCL.value = '';
+        }
+
+        function excelSerialToISO(serial) {
+            const utcDays = Math.floor(serial - 25569);
+            const date = new Date(utcDays * 86400 * 1000);
+            const y = date.getUTCFullYear();
+            const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+            const d = String(date.getUTCDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        function parseCLDateCell(raw) {
+            if (raw === undefined || raw === null || raw === '') return null;
+            if (typeof raw === 'number') {
+                if (raw > 30000) return excelSerialToISO(raw);
+                return null;
+            }
+            let str = String(raw).trim();
+            if (!str) return null;
+
+            if (/^\d+(\.\d+)?$/.test(str) && Number(str) > 30000) {
+                return excelSerialToISO(Number(str));
+            }
+
+            let m = str.match(/(\d{4})[.\-\/](\d{1,2})[.\-\/](\d{1,2})/);
+            if (m) {
+                return `${m[1]}-${String(parseInt(m[2])).padStart(2, '0')}-${String(parseInt(m[3])).padStart(2, '0')}`;
+            }
+
+            m = str.match(/^(\d{2})[.\-\/](\d{1,2})[.\-\/](\d{1,2})$/);
+            if (m) {
+                const yr = 2000 + parseInt(m[1]);
+                return `${yr}-${String(parseInt(m[2])).padStart(2, '0')}-${String(parseInt(m[3])).padStart(2, '0')}`;
+            }
+
+            const d = new Date(str);
+            if (!isNaN(d.getTime())) {
+                return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            }
+            return null;
+        }
+
+        function parseExcelCL(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array', raw: false });
+                        const firstSheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheetName];
+                        const json = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+
+                        if (json.length < 2) { resolve(false); return; }
+
+                        let headerRowIdx = -1;
+                        for (let i = 0; i < Math.min(10, json.length); i++) {
+                            const row = json[i];
+                            if (row && row.some(h => String(h).replace(/\s/g, '') === CL_NAME_COL) &&
+                                       row.some(h => String(h).replace(/\s/g, '') === CL_QTY_COL)) {
+                                headerRowIdx = i; break;
+                            }
+                        }
+
+                        if (headerRowIdx === -1) {
+                            console.error(`CL 엑셀 헤더(${CL_NAME_COL}/${CL_QTY_COL}/${CL_DATE_COL})를 찾지 못했습니다: ${file.name}`);
+                            resolve(false);
+                            return;
+                        }
+
+                        const headers = json[headerRowIdx];
+                        const nameIdx = headers.findIndex(h => h && String(h).trim() === CL_NAME_COL);
+                        const qtyIdx = headers.findIndex(h => h && String(h).trim() === CL_QTY_COL);
+                        const dateIdx = headers.findIndex(h => h && String(h).trim() === CL_DATE_COL);
+
+                        if (nameIdx === -1 || qtyIdx === -1 || dateIdx === -1) {
+                            console.error(`CL 엑셀 필수 열 누락: ${file.name}`);
+                            resolve(false);
+                            return;
+                        }
+
+                        for (let r = headerRowIdx + 1; r < json.length; r++) {
+                            const row = json[r];
+                            if (!row || row.length === 0) continue;
+
+                            const name = String(row[nameIdx] || '').trim();
+                            if (!name) continue;
+
+                            let rawQty = row[qtyIdx];
+                            if (typeof rawQty === 'string') rawQty = rawQty.replace(/,/g, '');
+                            const qty = parseInt(rawQty) || 0;
+
+                            const dateStr = parseCLDateCell(row[dateIdx]);
+                            if (!dateStr || qty <= 0) continue;
+
+                            const key = name;
+                            if (!clGlobalData[key]) {
+                                clGlobalData[key] = { name: name, dates: {} };
+                            }
+                            if (!clGlobalData[key].dates) {
+                                clGlobalData[key].dates = {};
+                            }
+
+                            // 겹치는 품목+날짜는 최신 값으로 덮어씀 (중복 완전 필터링)
+                            clGlobalData[key].dates[dateStr] = qty;
+                        }
+                        resolve(true);
+                    } catch (err) {
+                        console.error("CL Excel Parsing error:", err);
+                        resolve(false);
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        function renderItemListCL(filterText = '') {
+            itemListCL.innerHTML = '';
+
+            if (!filterText.trim()) {
+                itemCountCL.innerText = `0건`;
+                itemListCL.classList.add('hidden');
+                return;
+            }
+
+            itemListCL.classList.remove('hidden');
+
+            let items = Object.entries(clGlobalData).map(([key, item]) => {
+                const datesObj = item.dates || {};
+                const activeDates = Object.keys(datesObj).filter(d => datesObj[d] > 0).sort();
+                const totalInbound = activeDates.reduce((a, b) => a + datesObj[b], 0);
+                const latestDate = activeDates.length > 0 ? activeDates[activeDates.length - 1] : '';
+                return { key, ...item, totalInbound, latestDate, activeDates };
+            }).filter(item => item.activeDates.length > 0);
+
+            const lowerFilter = filterText.toLowerCase();
+            items = items.filter(i => (i.name || '').toLowerCase().includes(lowerFilter));
+            items.sort((a, b) => b.totalInbound - a.totalInbound);
+            itemCountCL.innerText = `${Math.min(items.length, 6)}건 표시 (검색결과 ${items.length}건)`;
+
+            const displayItems = items.slice(0, 6);
+
+            if (displayItems.length === 0) {
+                itemListCL.innerHTML = `<li class="col-span-full p-6 text-center text-lg font-bold text-slate-400 mt-4">조건에 맞는 품목이 없거나 입고 이력이 없습니다.</li>`;
+                return;
+            }
+
+            displayItems.forEach((item, index) => {
+                const li = document.createElement('li');
+                const isFirst = index === 0;
+                const isSelected = isFirst || clSelectedItemKey === item.key;
+
+                li.className = `p-5 border cursor-pointer transition-all flex flex-col justify-between gap-3 rounded-2xl shadow-sm hover:-translate-y-1 hover:shadow-md ${isSelected ? 'bg-blue-50 border-blue-400 ring-2 ring-blue-400' : 'bg-white border-slate-200 hover:border-blue-300'}`;
+
+                li.addEventListener('click', () => selectItemCL(item.key, li));
+
+                li.innerHTML = `
+                    <div>
+                        <h4 class="text-base font-extrabold text-slate-800 line-clamp-2 leading-snug">${item.name}</h4>
+                    </div>
+                    <div class="flex justify-between items-end mt-3 border-t border-slate-100 pt-3">
+                        <span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-100">최근: ${item.latestDate || '-'}</span>
+                        <span class="text-sm font-extrabold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg">${item.totalInbound.toLocaleString()}개</span>
+                    </div>
+                `;
+                itemListCL.appendChild(li);
+
+                if (isFirst) {
+                    clSelectedItemKey = item.key;
+                    clSelectedYear = 'all';
+                    chartOverlayCL.classList.add('hidden');
+                    renderChartCL(item.key);
+                }
+            });
+        }
+
+        function selectItemCL(key, element) {
+            document.querySelectorAll('#item-list-cl li').forEach(el => {
+                el.classList.remove('bg-blue-50', 'border-blue-400', 'ring-2', 'ring-blue-400');
+                el.classList.add('bg-white', 'border-slate-200');
+            });
+            element.classList.remove('bg-white', 'border-slate-200');
+            element.classList.add('bg-blue-50', 'border-blue-400', 'ring-2', 'ring-blue-400');
+
+            clSelectedItemKey = key;
+            clSelectedYear = 'all';
+            chartOverlayCL.classList.add('hidden');
+
+            renderChartCL(key);
+        }
+
+        function renderChartCL(key) {
+            if (!clGlobalData[key]) return;
+            const item = clGlobalData[key];
+            const datesObj = item.dates || {};
+            const activeDates = Object.keys(datesObj).filter(d => datesObj[d] > 0).sort();
+
+            renderYearFilterCL(activeDates);
+
+            let filteredDates = activeDates;
+            if (clSelectedYear !== 'all') {
+                filteredDates = activeDates.filter(d => d.startsWith(clSelectedYear));
+            }
+
+            const chartData = filteredDates.map(d => datesObj[d]);
+            const yearText = clSelectedYear === 'all' ? '전체 기간' : `${clSelectedYear}년도`;
+
+            const currentTotal = chartData.reduce((sum, val) => sum + val, 0);
+            chartTitleCL.innerHTML = `
+                <div class="flex flex-wrap items-center gap-2">
+                    <i class="ph ph-chart-bar text-blue-500"></i>
+                    <span class="text-slate-800">${item.name}</span> 입고 추이
+                    <span class="text-base text-slate-500 font-medium ml-1 bg-slate-100 px-2 py-1 rounded-md">${yearText}</span>
+                    <span class="text-base text-blue-700 font-extrabold bg-blue-50 px-3 py-1 rounded-lg border border-blue-200 ml-2">합계: ${currentTotal.toLocaleString()}개</span>
+                </div>
+            `;
+
+            const wrapper = document.getElementById('chart-wrapper-cl');
+            const parentWidth = wrapper.parentElement.clientWidth;
+            const calculatedWidth = Math.max(parentWidth, filteredDates.length * 80);
+            wrapper.style.width = calculatedWidth + 'px';
+
+            const ctx = document.getElementById('inboundChart-cl').getContext('2d');
+
+            if (clChartInstance) clChartInstance.destroy();
+
+            clChartInstance = new Chart(ctx, {
+                type: clChartType,
+                data: {
+                    labels: filteredDates,
+                    datasets: [{
+                        label: '입고 수량',
+                        data: chartData,
+                        backgroundColor: clChartType === 'bar' ? 'rgba(59, 130, 246, 0.7)' : 'rgba(59, 130, 246, 0.1)',
+                        borderColor: 'rgb(59, 130, 246)',
+                        borderWidth: 2,
+                        pointBackgroundColor: 'rgb(59, 130, 246)',
+                        pointRadius: clChartType === 'line' ? 5 : 0,
+                        pointHoverRadius: 7,
+                        fill: clChartType === 'line',
+                        tension: 0.1,
+                        borderRadius: clChartType === 'bar' ? 4 : 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    layout: { padding: { top: 60, bottom: 20, left: 10, right: 20 } },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                            titleFont: { size: 14, family: 'Pretendard' },
+                            bodyFont: { size: 15, weight: 'bold', family: 'Pretendard' },
+                            padding: 12,
+                            callbacks: {
+                                label: function(context) { return ' 입고량: ' + context.parsed.y.toLocaleString() + ' 개'; }
+                            }
+                        },
+                        datalabels: {
+                            color: '#475569',
+                            anchor: 'end',
+                            align: 'top',
+                            offset: 6,
+                            font: { weight: '900', size: 13, family: 'Pretendard' },
+                            formatter: function(value, context) {
+                                if (!value || value === 0) return '';
+                                const dateStr = context.chart.data.labels[context.dataIndex] || '';
+                                const shortDate = dateStr.length >= 8 ? dateStr.substring(2) : dateStr;
+                                return value.toLocaleString() + '\n(' + shortDate + ')';
+                            },
+                            textAlign: 'center'
+                        }
+                    },
+                    scales: {
+                        x: { grid: { display: false, drawBorder: false }, ticks: { font: { family: 'Pretendard', weight: 'bold', size: 12 }, color: '#64748b' } },
+                        y: {
+                            beginAtZero: false, grace: '20%',
+                            grid: { color: 'rgba(226, 232, 240, 0.6)', drawBorder: false, borderDash: [5, 5] },
+                            ticks: {
+                                font: { family: 'Pretendard', weight: 'bold' }, color: '#94a3b8',
+                                callback: function(value) { if (value % 1 === 0) return value.toLocaleString(); }
+                            }
+                        }
+                    }
+                }
+            });
+
+            renderTableCL(filteredDates, chartData);
+        }
+
+        function renderYearFilterCL(activeDates) {
+            const container = document.getElementById('year-filter-container-cl');
+            const years = [...new Set(activeDates.map(d => d.substring(0, 4)))];
+
+            years.sort((a, b) => b.localeCompare(a));
+
+            let html = `<button data-year="all" class="year-btn-cl px-5 py-2 text-sm font-extrabold rounded-lg transition-all ${clSelectedYear === 'all' ? 'bg-slate-800 text-white shadow-md scale-105' : 'text-slate-600 hover:bg-slate-200 bg-white border border-slate-200'}">전체</button>`;
+
+            years.forEach(y => {
+                html += `<button data-year="${y}" class="year-btn-cl px-5 py-2 text-sm font-extrabold rounded-lg transition-all ${clSelectedYear === y ? 'bg-slate-800 text-white shadow-md scale-105' : 'text-slate-600 hover:bg-slate-200 bg-white border border-slate-200'}">${y}년</button>`;
+            });
+            container.innerHTML = html;
+
+            container.querySelectorAll('.year-btn-cl').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    clSelectedYear = e.target.getAttribute('data-year');
+                    renderChartCL(clSelectedItemKey);
+                });
+            });
+        }
+
+        function renderTableCL(dates, data) {
+            const container = document.getElementById('table-container-cl');
+            const tbody = document.getElementById('data-table-body-cl');
+            const title = document.getElementById('table-title-cl');
+
+            container.classList.remove('hidden');
+            tbody.innerHTML = '';
+            const yearText = clSelectedYear === 'all' ? '전체 기간' : `${clSelectedYear}년도`;
+
+            const tableTotal = data.reduce((sum, val) => sum + val, 0);
+            title.innerHTML = `
+                <div class="flex items-center justify-between w-full">
+                    <div class="flex items-center gap-2">
+                        <i class="ph ph-table text-emerald-500"></i> 상세 입고 내역
                         <span class="text-sm font-normal text-slate-500 ml-1">(${yearText} 기준, 최신순 정렬)</span>
                     </div>
                     <span class="text-base text-emerald-700 font-extrabold bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200">
