@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>입고 데이터 분석기 (v15)</title>
+    <title>입고 데이터 분석기 (v16)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -38,10 +38,13 @@
             display: none !important;
         }
 
-        .tab-btn { border-bottom-width: 3px; margin-bottom: -2px; cursor: pointer; }
-        .tab-btn.tab-active { border-color: #2563eb; color: #2563eb; }
-        .tab-btn.tab-inactive { border-color: transparent; color: #64748b; }
-        .tab-btn.tab-inactive:hover { color: #334155; border-color: #cbd5e1; }
+        .tab-btn { border-bottom-width: 4px; margin-bottom: -2px; cursor: pointer; }
+        .tab-btn.tab-ez.tab-active { border-color: #2563eb; color: #2563eb; background-color: #eff6ff; }
+        .tab-btn.tab-ez.tab-inactive { border-color: transparent; color: #64748b; }
+        .tab-btn.tab-ez.tab-inactive:hover { color: #2563eb; border-color: #bfdbfe; background-color: #f8fafc; }
+        .tab-btn.tab-cl.tab-active { border-color: #059669; color: #059669; background-color: #ecfdf5; }
+        .tab-btn.tab-cl.tab-inactive { border-color: transparent; color: #64748b; }
+        .tab-btn.tab-cl.tab-inactive:hover { color: #059669; border-color: #a7f3d0; background-color: #f8fafc; }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen flex flex-col text-slate-800">
@@ -77,7 +80,7 @@
             <i class="ph ph-chart-line-up text-3xl text-blue-600"></i>
             <div>
                 <h1 class="text-xl font-bold text-slate-900 flex items-center gap-3">
-                    입고 데이터 분석기 <span class="text-blue-500">(v15)</span>
+                    입고 데이터 분석기 <span class="text-blue-500">(v16)</span>
                     <div id="cloud-status" class="flex items-center gap-1.5 px-3 py-1 bg-slate-100 text-slate-500 rounded-full text-xs font-medium transition-colors">
                         <i class="ph ph-spinner-gap animate-spin text-lg"></i>
                         <span>클라우드 연결 준비중...</span>
@@ -104,11 +107,11 @@
 
         <!-- 탭 전환 바 (메인 타이틀 제외 최상단) -->
         <div class="w-full flex items-center gap-1 border-b-2 border-slate-200 shrink-0">
-            <button id="tab-btn-ez" type="button" class="tab-btn tab-active px-5 py-3 text-sm font-extrabold transition-colors flex items-center gap-2">
-                <i class="ph ph-archive"></i> 이지어드민 (과거 이력)
+            <button id="tab-btn-ez" type="button" class="tab-btn tab-ez tab-active px-7 py-4 text-lg font-extrabold transition-colors flex items-center gap-2.5 rounded-t-lg">
+                <i class="ph ph-archive text-xl"></i> 이지어드민 (과거 이력)
             </button>
-            <button id="tab-btn-cl" type="button" class="tab-btn tab-inactive px-5 py-3 text-sm font-extrabold transition-colors flex items-center gap-2">
-                <i class="ph ph-truck"></i> CL 시스템 (신규 입고)
+            <button id="tab-btn-cl" type="button" class="tab-btn tab-cl tab-inactive px-7 py-4 text-lg font-extrabold transition-colors flex items-center gap-2.5 rounded-t-lg">
+                <i class="ph ph-truck text-xl"></i> CL 시스템
             </button>
         </div>
 
@@ -225,6 +228,7 @@
                 <h3 class="font-bold flex items-center gap-2 text-lg">
                     <i class="ph ph-list-dashes text-slate-500"></i>
                     CL 시스템 품목 목록
+                    <span id="cl-last-update" class="text-xs font-medium text-slate-400 ml-1"></span>
                 </h3>
                 <span id="item-count-cl" class="text-sm font-semibold bg-slate-200 text-slate-700 px-3 py-1.5 rounded-full">0건</span>
             </div>
@@ -1245,6 +1249,19 @@
         function renderItemListCL(filterText = '') {
             itemListCL.innerHTML = '';
 
+            // 전체 품목 기준 "가장 마지막으로 품목이 입고된 날짜" 계산 (엑셀 업로드일 기준 아님)
+            const lastUpdateEl = document.getElementById('cl-last-update');
+            let globalLatestDate = '';
+            Object.values(clGlobalData).forEach(item => {
+                const datesObj = item.dates || {};
+                Object.keys(datesObj).forEach(d => {
+                    if (datesObj[d] > 0 && d > globalLatestDate) globalLatestDate = d;
+                });
+            });
+            if (lastUpdateEl) {
+                lastUpdateEl.innerText = globalLatestDate ? `최종 업데이트: ${globalLatestDate}` : '';
+            }
+
             if (!filterText.trim()) {
                 itemCountCL.innerText = `0건`;
                 itemListCL.classList.add('hidden');
@@ -1263,7 +1280,7 @@
 
             const lowerFilter = filterText.toLowerCase();
             items = items.filter(i => (i.name || '').toLowerCase().includes(lowerFilter));
-            items.sort((a, b) => b.totalInbound - a.totalInbound);
+            items.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
             itemCountCL.innerText = `${Math.min(items.length, 6)}건 표시 (검색결과 ${items.length}건)`;
 
             const displayItems = items.slice(0, 6);
