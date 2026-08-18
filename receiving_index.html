@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>입고 데이터 분석기 (v16)</title>
+    <title>입고 데이터 분석기 (v18)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -80,7 +80,7 @@
             <i class="ph ph-chart-line-up text-3xl text-blue-600"></i>
             <div>
                 <h1 class="text-xl font-bold text-slate-900 flex items-center gap-3">
-                    입고 데이터 분석기 <span class="text-blue-500">(v16)</span>
+                    입고 데이터 분석기 <span class="text-blue-500">(v18)</span>
                     <div id="cloud-status" class="flex items-center gap-1.5 px-3 py-1 bg-slate-100 text-slate-500 rounded-full text-xs font-medium transition-colors">
                         <i class="ph ph-spinner-gap animate-spin text-lg"></i>
                         <span>클라우드 연결 준비중...</span>
@@ -228,7 +228,7 @@
                 <h3 class="font-bold flex items-center gap-2 text-lg">
                     <i class="ph ph-list-dashes text-slate-500"></i>
                     CL 시스템 품목 목록
-                    <span id="cl-last-update" class="text-xs font-medium text-slate-400 ml-1"></span>
+                    <span id="cl-last-update" class="text-sm font-bold text-slate-500 ml-1"></span>
                 </h3>
                 <span id="item-count-cl" class="text-sm font-semibold bg-slate-200 text-slate-700 px-3 py-1.5 rounded-full">0건</span>
             </div>
@@ -350,6 +350,17 @@
             btnEz.classList.toggle('tab-inactive', !isEz);
             btnCl.classList.toggle('tab-active', !isEz);
             btnCl.classList.toggle('tab-inactive', isEz);
+
+            // 탭이 숨겨진(display:none) 상태에서 미리 렌더링된 차트는 폭이 0 기준으로 계산되어
+            // 좁게 표시되는 문제가 있으므로, 탭이 실제로 보이는 시점에 다시 그려서 폭을 재계산한다.
+            requestAnimationFrame(() => {
+                if (isEz && typeof selectedItemKey !== 'undefined' && selectedItemKey) {
+                    renderChart(selectedItemKey);
+                }
+                if (!isEz && typeof clSelectedItemKey !== 'undefined' && clSelectedItemKey) {
+                    renderChartCL(clSelectedItemKey);
+                }
+            });
         }
         document.getElementById('tab-btn-ez').addEventListener('click', () => switchTab('ez'));
         document.getElementById('tab-btn-cl').addEventListener('click', () => switchTab('cl'));
@@ -717,12 +728,6 @@
         function renderItemList(filterText = '') {
             itemList.innerHTML = '';
 
-            if (!filterText.trim()) {
-                itemCount.innerText = `0건`;
-                itemList.classList.add('hidden');
-                return;
-            }
-
             itemList.classList.remove('hidden');
 
             let items = Object.entries(globalData).map(([key, item]) => {
@@ -737,15 +742,27 @@
                 return item.activeDates.length > 0 && !safeName.includes('알수없는상품') && safeCode !== 'UNKNOWN';
             });
 
-            const lowerFilter = filterText.toLowerCase();
-            items = items.filter(i => (i.name||'').toLowerCase().includes(lowerFilter) || (i.code||'').toLowerCase().includes(lowerFilter));
-            items.sort((a, b) => b.totalInbound - a.totalInbound);
-            itemCount.innerText = `${Math.min(items.length, 6)}건 표시 (검색결과 ${items.length}건)`;
+            const isSearching = !!filterText.trim();
+
+            if (isSearching) {
+                // 검색 중: 이름/코드로 필터링 후 누적 입고량 순 정렬
+                const lowerFilter = filterText.toLowerCase();
+                items = items.filter(i => (i.name||'').toLowerCase().includes(lowerFilter) || (i.code||'').toLowerCase().includes(lowerFilter));
+                items.sort((a, b) => b.totalInbound - a.totalInbound);
+                itemCount.innerText = `${Math.min(items.length, 6)}건 표시 (검색결과 ${items.length}건)`;
+            } else {
+                // 검색어 없음: 마지막으로 입고된 품목 순으로 정렬, 같은 날짜면 가나다순
+                items.sort((a, b) => {
+                    if (a.latestDate !== b.latestDate) return b.latestDate.localeCompare(a.latestDate);
+                    return (a.name || '').localeCompare(b.name || '', 'ko');
+                });
+                itemCount.innerText = `최근 입고순 ${Math.min(items.length, 6)}건`;
+            }
 
             const displayItems = items.slice(0, 6);
 
             if (displayItems.length === 0) {
-                itemList.innerHTML = `<li class="col-span-full p-6 text-center text-lg font-bold text-slate-400 mt-4">조건에 맞는 품목이 없거나 입고 이력이 없습니다.</li>`;
+                itemList.innerHTML = `<li class="col-span-full p-6 text-center text-lg font-bold text-slate-400 mt-4">${isSearching ? '조건에 맞는 품목이 없거나 입고 이력이 없습니다.' : '입고 데이터가 없습니다.'}</li>`;
                 return;
             }
 
@@ -823,7 +840,7 @@
             `;
 
             const wrapper = document.getElementById('chart-wrapper');
-            const parentWidth = wrapper.parentElement.clientWidth;
+            const parentWidth = wrapper.parentElement.clientWidth || 800;
             const calculatedWidth = Math.max(parentWidth, filteredDates.length * 80);
             wrapper.style.width = calculatedWidth + 'px';
 
@@ -1262,12 +1279,6 @@
                 lastUpdateEl.innerText = globalLatestDate ? `최종 업데이트: ${globalLatestDate}` : '';
             }
 
-            if (!filterText.trim()) {
-                itemCountCL.innerText = `0건`;
-                itemListCL.classList.add('hidden');
-                return;
-            }
-
             itemListCL.classList.remove('hidden');
 
             let items = Object.entries(clGlobalData).map(([key, item]) => {
@@ -1278,15 +1289,27 @@
                 return { key, ...item, totalInbound, latestDate, activeDates };
             }).filter(item => item.activeDates.length > 0);
 
-            const lowerFilter = filterText.toLowerCase();
-            items = items.filter(i => (i.name || '').toLowerCase().includes(lowerFilter));
-            items.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
-            itemCountCL.innerText = `${Math.min(items.length, 6)}건 표시 (검색결과 ${items.length}건)`;
+            const isSearching = !!filterText.trim();
+
+            if (isSearching) {
+                // 검색 중: 이름으로 필터링 후 가나다순 정렬
+                const lowerFilter = filterText.toLowerCase();
+                items = items.filter(i => (i.name || '').toLowerCase().includes(lowerFilter));
+                items.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
+                itemCountCL.innerText = `${Math.min(items.length, 6)}건 표시 (검색결과 ${items.length}건)`;
+            } else {
+                // 검색어 없음: 마지막으로 입고된 품목 순으로 정렬, 같은 날짜면 가나다순
+                items.sort((a, b) => {
+                    if (a.latestDate !== b.latestDate) return b.latestDate.localeCompare(a.latestDate);
+                    return (a.name || '').localeCompare(b.name || '', 'ko');
+                });
+                itemCountCL.innerText = `최근 입고순 ${Math.min(items.length, 6)}건`;
+            }
 
             const displayItems = items.slice(0, 6);
 
             if (displayItems.length === 0) {
-                itemListCL.innerHTML = `<li class="col-span-full p-6 text-center text-lg font-bold text-slate-400 mt-4">조건에 맞는 품목이 없거나 입고 이력이 없습니다.</li>`;
+                itemListCL.innerHTML = `<li class="col-span-full p-6 text-center text-lg font-bold text-slate-400 mt-4">${isSearching ? '조건에 맞는 품목이 없거나 입고 이력이 없습니다.' : '입고 데이터가 없습니다.'}</li>`;
                 return;
             }
 
@@ -1361,7 +1384,7 @@
             `;
 
             const wrapper = document.getElementById('chart-wrapper-cl');
-            const parentWidth = wrapper.parentElement.clientWidth;
+            const parentWidth = wrapper.parentElement.clientWidth || 800;
             const calculatedWidth = Math.max(parentWidth, filteredDates.length * 80);
             wrapper.style.width = calculatedWidth + 'px';
 
